@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 def esc(text: str) -> str:
     """Escape karakter khusus MarkdownV2."""
+    text = str(text)
     for ch in r"_*[]()~`>#+-=|{}.!":
         text = text.replace(ch, "\\" + ch)
     return text
@@ -44,7 +45,9 @@ def stats_msg(data: Dict) -> str:
 
 
 def countries_msg(data: Dict) -> str:
-    items = data.get("data", data) if isinstance(data, dict) else data
+    if isinstance(data, dict) and isinstance(data.get("data"), (list, dict)):
+        data = data["data"]
+    items = list(data.values()) if isinstance(data, dict) else data
     if not isinstance(items, list):
         items = [items]
     lines = [header("🌍 Daftar Negara", "Pilih negara untuk beli nomor")]
@@ -52,7 +55,7 @@ def countries_msg(data: Dict) -> str:
         return lines[0] + "\nBelum ada data negara\\.\n"
     for item in items[:30]:
         if isinstance(item, dict):
-            name = item.get("name", "-")
+            name = item.get("eng", item.get("name", "-"))
             code_ = item.get("code", item.get("id", "-"))
             lines.append(f"🇮🇩 {esc(name)} — {code(code_)}")
         else:
@@ -63,7 +66,9 @@ def countries_msg(data: Dict) -> str:
 
 
 def services_msg(data: Dict) -> str:
-    items = data.get("data", data) if isinstance(data, dict) else data
+    if isinstance(data, dict) and isinstance(data.get("services"), list):
+        data = data["services"]
+    items = list(data.values()) if isinstance(data, dict) else data
     if not isinstance(items, list):
         items = [items]
     lines = [header("📱 Daftar Layanan", "Pilih layanan verifikasi")]
@@ -84,12 +89,20 @@ def services_msg(data: Dict) -> str:
 def prices_msg(data: Dict) -> str:
     lines = [header("💵 Harga Aktivasi", "Per layanan / negara")]
     if isinstance(data, dict):
-        if not data:
+        if isinstance(data.get("data"), (list, dict)):
+            data = data["data"]
+        entries = list(data.items()) if isinstance(data, dict) else []
+        if not entries:
             return lines[0] + "\nBelum ada data harga\\.\n"
-        for key, val in data.items():
-            lines.append(f"• {esc(str(key))}: {code(str(val))}")
+        for key, val in entries[:15]:
+            s = str(val)
+            if len(s) > 80:
+                s = s[:77] + "..."
+            lines.append(f"• {esc(str(key))}: {code(s)}")
+        if len(entries) > 15:
+            lines.append(f"\n_…dan {len(entries) - 15} negara lainnya\\._")
     else:
-        lines.append(code(str(data)))
+        lines.append(code(str(data)[:300]))
     return "\n".join(lines) + "\n"
 
 

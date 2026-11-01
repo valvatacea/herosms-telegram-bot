@@ -150,6 +150,18 @@ def _edit(chat: int, msg_id: int, text: str, markup=None) -> None:
         bot.send_message(chat, text, reply_markup=markup)
 
 
+def _legacy_items(data):
+    """Normalisasi respons legacy ke list: {'services': [...]} atau {id: {...}} → list."""
+    if isinstance(data, dict):
+        if isinstance(data.get("services"), list):
+            return data["services"]
+        if isinstance(data.get("data"), (list, dict)):
+            data = data["data"]
+    if isinstance(data, dict):
+        return [v for v in data.values() if isinstance(v, dict)]
+    return data if isinstance(data, list) else []
+
+
 # ── Command ─────────────────────────────────────────────────────
 
 @bot.message_handler(commands=["start"])
@@ -364,7 +376,7 @@ def on_callback(call: CallbackQuery) -> None:
 
 def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
     try:
-        data = api.user_stats()
+        data = api.get_balance()
         _edit(chat, msg_id, balance_msg(data), back_menu())
         _answer(call, "Saldo dimuat")
     except HeroSMSError as exc:
@@ -415,7 +427,7 @@ def _show_prices(chat: int, msg_id: int, call: CallbackQuery) -> None:
 def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
     try:
         data = api.legacy("getCountries")
-        items = data.get("data", data) if isinstance(data, dict) else data
+        items = _legacy_items(data)
         _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara \\(Indonesia ditampilkan paling atas\\):", buy_countries_keyboard(items))
         _answer(call, "Pilih negara")
     except HeroSMSError as exc:
@@ -427,7 +439,7 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
     try:
         set_state(uid, "buy_country", country)
         data = api.legacy("getServicesList")
-        items = data.get("data", data) if isinstance(data, dict) else data
+        items = _legacy_items(data)
         _edit(
             chat,
             msg_id,
@@ -684,7 +696,7 @@ def _show_email_list(chat: int, msg_id: int, call: CallbackQuery, page: int = 1)
 def _show_email_services_for_buy(chat: int, msg_id: int, uid: int, domain: str, call: CallbackQuery) -> None:
     try:
         data = api.legacy("getServicesList")
-        items = data.get("data", data) if isinstance(data, dict) else data
+        items = _legacy_items(data)
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
         buttons = []
         for item in items[:25]:

@@ -49,7 +49,7 @@ def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyb
 
 # ── Keyboard pembelian (negara & layanan, populer dulu) ─────────
 
-POPULAR_COUNTRY_IDS = ["id", "ID", "Indonesia", "indonesia"]
+POPULAR_COUNTRY_IDS = ["6", "id", "ID", "Indonesia", "indonesia"]
 POPULAR_SERVICE_IDS = ["wa", "whatsapp", "tg", "telegram", "fb", "facebook", "ig", "instagram", "sms", "sms-verify"]
 
 
@@ -72,12 +72,12 @@ def buy_countries_keyboard(items):
     buttons = []
     for item in ordered[:20]:
         if isinstance(item, dict):
-            name = item.get("name", "-")
+            name = item.get("eng", item.get("name", "-"))
             cid = item.get("id", item.get("code", "-"))
         else:
             name = str(item)
             cid = str(item)
-        is_id = str(cid).lower() in {"id", "indonesia"}
+        is_id = str(cid) == "6" or str(cid).lower() in {"id", "indonesia"}
         label = f"🇮🇩 {name}" if is_id else f"🌍 {name}"
         buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}"))
     kb.add(*buttons)

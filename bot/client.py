@@ -180,7 +180,7 @@ class HeroSMS:
 
             def _extract_price(val):
                 if isinstance(val, dict):
-                    return str(val.get("price", "-")), str(val.get("currency", ""))
+                    return str(val.get("cost", val.get("price", "-"))), str(val.get("currency", ""))
                 return str(val), ""
 
             # Format 2: {service: {country: price}} / {country: {service: price}}
@@ -239,6 +239,15 @@ class HeroSMS:
 
     def offers(self, verification_type: str) -> Dict:
         return self._get(f"/activations/offers/{verification_type}")
+
+    def get_balance(self) -> Dict:
+        """Saldo via legacy getBalance ( respons 'ACCESS_BALANCE:0.8234' )."""
+        data = self.legacy("getBalance")
+        if isinstance(data, dict) and "balance" in data:
+            return data
+        text = data.get("text", "") if isinstance(data, dict) else str(data)
+        val = text.split(":", 1)[1].strip() if ":" in text else text
+        return {"balance": val}
 
     # ── Emails ───────────────────────────────────────────────────
 
