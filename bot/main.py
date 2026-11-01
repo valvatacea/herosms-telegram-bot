@@ -199,6 +199,16 @@ def _fmt_price(usd, uid) -> str:
     return code(f"Rp{rp}")
 
 
+def _price_disp(usd, uid) -> str:
+    """Biaya dengan emot & simbol sesuai mata uang: 💵 $x / 🇮🇩 Rpx."""
+    usd = str(usd)
+    if usd in ("-", ""):
+        return code("-")
+    if (get_state(uid, "settings_currency") or "usd") == "idr":
+        return f"🇮🇩 {_fmt_price(usd, uid)}"
+    return f"💵 {code('$' + usd)}"
+
+
 def _idr_label(usd, uid) -> str:
     """Label tombol harga: '🇮🇩 Rp...' saat mode IDR, '💵 $USD' saat USD."""
     usd = str(usd)
@@ -495,11 +505,7 @@ def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
         uid = call.from_user.id
         data = api.get_balance()
         bal = str(data.get("balance", "-"))
-        if (get_state(uid, "settings_currency") or "usd") == "idr":
-            pstr = f"🇮🇩 {_fmt_price(bal, uid)}"
-        else:
-            pstr = f"💵 {code('$' + bal)}"
-        _edit(chat, msg_id, balance_msg(data, pstr), back_menu())
+        _edit(chat, msg_id, balance_msg(data, _price_disp(bal, uid)), back_menu())
         _answer(call, "Saldo dimuat")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
@@ -684,10 +690,10 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         set_state(uid, "purchases", pops)
         set_state(uid, "otp_watch", watch)
         if call:
-            _edit(chat, msg_id, purchase_success(act, _fmt_price(act.get("price", get_state(uid, "buy_price", "-")), uid)), activation_actions(str(act.get("id", "")), watching=False))
+            _edit(chat, msg_id, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), activation_actions(str(act.get("id", "")), watching=False))
             _answer(call, "Nomor dibeli")
         else:
-            bot.send_message(chat, purchase_success(act, _fmt_price(act.get("price", get_state(uid, "buy_price", "-")), uid)), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
+            bot.send_message(chat, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
     except HeroSMSError as exc:
         if call:
             _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
@@ -805,7 +811,7 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
             act["serviceName"] = _service_name(act.get("service"))
             act["countryName"] = _country_name(act.get("country"))
         watch = _is_watching(call.from_user.id, str(aid))
-        _edit(chat, msg_id, activation_detail(act), activation_actions(str(aid), watching=watch))
+        _edit(chat, msg_id, activation_detail(act, _price_disp(act.get("price", act.get("cost", "-")), call.from_user.id)), activation_actions(str(aid), watching=watch))
         _answer(call, "Detail aktivasi")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())

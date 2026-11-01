@@ -179,7 +179,8 @@ def _fmt_dt(iso: str) -> str:
         return str(iso)
 
 
-def activation_detail(act: Dict) -> str:
+def activation_detail(act: Dict, price_str: str = "") -> str:
+    cost_line = price_str or f"{code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}"
     lines = [
         f"{header('📋 Detail Aktivasi', f'ID: {code(str(act.get("id","-")))}')}",
         f"{bold('Status:')} {esc(str(act.get('status','-')))}",
@@ -187,7 +188,7 @@ def activation_detail(act: Dict) -> str:
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
         f"{bold('Layanan:')} {esc(str(act.get('serviceName', act.get('service','-'))))}",
         f"{bold('Negara:')} {esc(str(act.get('countryName', act.get('country','-'))))}",
-        f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
+        f"{bold('Biaya:')} {cost_line}",
     ]
     more = act.get("moreCodes")
     if more:
