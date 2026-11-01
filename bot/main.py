@@ -763,10 +763,10 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         set_state(uid, "purchases", pops)
         set_state(uid, "otp_watch", watch)
         if call:
-            _edit(chat, msg_id, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), activation_actions(str(act.get("id", "")), watching=False))
+            _edit(chat, msg_id, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), activation_actions(str(act.get("id", "")), watching=False, status=act.get("status")))
             _answer(call, "Nomor dibeli")
         else:
-            bot.send_message(chat, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
+            bot.send_message(chat, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), reply_markup=activation_actions(str(act.get("id", "")), watching=False, status=act.get("status")))
     except HeroSMSError as exc:
         if call:
             _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
@@ -885,7 +885,7 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
             act["serviceName"] = _service_name(act.get("service"))
             act["countryName"] = _country_name(act.get("country"))
         watch = _is_watching(call.from_user.id, str(aid))
-        _edit(chat, msg_id, activation_detail(act, _price_disp(act.get("price", act.get("cost", "-")), call.from_user.id)), activation_actions(str(aid), watching=watch))
+        _edit(chat, msg_id, activation_detail(act, _price_disp(act.get("price", act.get("cost", "-")), call.from_user.id)), activation_actions(str(aid), watching=watch, status=act.get("status")))
         _answer(call, "Detail aktivasi")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())

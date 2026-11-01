@@ -50,7 +50,7 @@ def back_menu() -> InlineKeyboardMarkup:
     return kb
 
 
-def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyboardMarkup:
+def activation_actions(activation_id: str, watching: bool = False, status=None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(
         InlineKeyboardButton("📨 OTP Terakhir", callback_data=f"otp:last:{activation_id}"),
@@ -63,8 +63,10 @@ def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyb
     kb.add(
         # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),
-        InlineKeyboardButton("🔄 Reaktivasi", callback_data=f"act:reactivate:{activation_id}"),
     )
+    # Reaktivasi hanya untuk aktivasi yang sudah selesai (status 6/10)
+    if status is None or str(status) in ("6", "10"):
+        kb.add(InlineKeyboardButton("🔄 Reaktivasi", callback_data=f"act:reactivate:{activation_id}"))
     kb.add(InlineKeyboardButton("⬅️ Daftar Aktif", callback_data="menu:active"))
     kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
     return kb
