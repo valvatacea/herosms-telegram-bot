@@ -782,12 +782,13 @@ def _do_resend(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
 
 
 def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    w = _is_watching(call.from_user.id, aid)
     try:
         api.reactivate_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid, watching=_is_watching(uid, aid)))
+        _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid, watching=w))
         _answer(call, "Di-reaktivasi")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
+        _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=w))
         _answer(call, _alert("Error", exc), alert=True)
 
 
@@ -1172,7 +1173,11 @@ def _start_otp_poller(bot, interval: int = 30):
                                     f"🔔 *OTP Baru untuk Aktivasi {aid}*\n\nKode: *{esc(latest_text)}*",
                                     parse_mode="MarkdownV2",
                                 )
-                        except HeroSMSError:
+                        except HeroSMSError as exc:
+                            if "HTTP 404" in str(exc):
+                                # aktivasi sudah tamat/dihapus — berhenti memantau
+                                watch.pop(aid, None)
+                                set_state(uid, "otp_watch", watch)
                             continue
                         except Exception:  # noqa: BLE001
                             continue
