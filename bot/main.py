@@ -182,7 +182,7 @@ def _idr_rate() -> float | None:
 
 
 def _fmt_price(usd, uid) -> str:
-    """Harga sesuai setting mata uang: USD polos, atau USD ≈ Rp (kurs)."""
+    """Harga sesuai setting mata uang: USD polos, atau Rp saja (kurs)."""
     usd = str(usd)
     if usd in ("-", ""):
         return code(usd)
@@ -192,15 +192,14 @@ def _fmt_price(usd, uid) -> str:
     if not rate:
         return code(usd)
     try:
-        idr = float(usd) * rate
-    except ValueError:
+        rp = f"{int(float(usd) * rate):,}".replace(",", ".")
+    except (TypeError, ValueError):
         return code(usd)
-    rp = "Rp" + f"{int(idr):,}".replace(",", ".")
-    return f"{code(usd)} ≈ {esc(rp)}"
+    return code(f"Rp{rp}")
 
 
 def _idr_label(usd, uid) -> str:
-    """Label tombol harga: '💵 Rp...' saat mode IDR, '💵 USD' saat USD."""
+    """Label tombol harga: '🇮🇩 Rp...' saat mode IDR, '💵 USD' saat USD."""
     usd = str(usd)
     if (get_state(uid, "settings_currency") or "usd") != "idr":
         return f"💵 {usd}"
@@ -211,7 +210,7 @@ def _idr_label(usd, uid) -> str:
         rp = f"{int(float(usd) * rate):,}".replace(",", ".")
     except (TypeError, ValueError):
         return f"💵 {usd}"
-    return f"💵 Rp{rp}"
+    return f"🇮🇩 Rp{rp}"
 
 
 # ── Command ─────────────────────────────────────────────────────
