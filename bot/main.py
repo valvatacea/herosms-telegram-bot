@@ -994,6 +994,10 @@ def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, "OTP dimuat")
     except HeroSMSError as exc:
+        if "STATUS_WAIT_CODE" in str(exc):
+            _edit(chat, msg_id, "🔹 *OTP Belum Masuk*\n\nMasih menunggu SMS pertama\. Nyalakan Notif OTP biar otomatis kabari saat masuk\.", activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
+            _answer(call, "OTP belum masuk")
+            return
         _edit(chat, msg_id, error_msg("Gagal Ambil OTP", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, _alert("Error", exc), alert=True)
 
