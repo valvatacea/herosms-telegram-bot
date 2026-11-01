@@ -431,7 +431,7 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
         _edit(
             chat,
             msg_id,
-            f"🔹 *Layanan - {country}*\n\nPilih layanan (populer ditampilkan paling atas):",
+            "🔹 *Layanan \\- {country}*".format(country=country) + "\n\nPilih layanan (populer ditampilkan paling atas):",
             buy_services_keyboard(items),
         )
         _answer(call, "Pilih layanan")
@@ -584,8 +584,21 @@ def _show_email_menu(chat: int, msg_id: int, call: CallbackQuery) -> None:
 
 
 def _show_email_domains(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    uid = call.from_user.id
+    site = get_state(uid, "email_site")
+    if not site:
+        set_state(uid, "_email_pending", "domains")
+        set_state(uid, "_email_chat", chat)
+        set_state(uid, "_email_msg_id", msg_id)
+        bot.send_message(chat, "Masukkan site (contoh: telegram.com):")
+        bot.register_next_step_handler(call.message, _handle_email_site_input)
+        _answer(call, "Masukkan site dulu")
+        return
+    _email_domains_render(chat, msg_id, uid, site)
+
+def _email_domains_render(chat: int, msg_id: int, uid: int, site: str) -> None:
     try:
-        data = api.email_domains()
+        data = api.email_domains(site=site)
         items = data.get("data", data) if isinstance(data, dict) else data
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
         buttons = []
@@ -598,20 +611,48 @@ def _show_email_domains(chat: int, msg_id: int, call: CallbackQuery) -> None:
         kb.add(*buttons)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:email"))
         _edit(chat, msg_id, "🔹 *Domain Email*\n\nPilih domain:", kb)
-        _answer(call, "Domain dimuat")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Domain", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
 
 
 def _show_email_offers(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    uid = call.from_user.id
+    site = get_state(uid, "email_site")
+    if not site:
+        set_state(uid, "_email_pending", "offers")
+        set_state(uid, "_email_chat", chat)
+        set_state(uid, "_email_msg_id", msg_id)
+        bot.send_message(chat, "Masukkan site (contoh: telegram.com):")
+        bot.register_next_step_handler(call.message, _handle_email_site_input)
+        _answer(call, "Masukkan site dulu")
+        return
+    _email_offers_render(chat, msg_id, uid, site)
+
+def _email_offers_render(chat: int, msg_id: int, uid: int, site: str) -> None:
     try:
-        data = api.email_offers()
+        data = api.email_offers(site=site)
         _edit(chat, msg_id, prices_msg(data), back_menu())
-        _answer(call, "Offers dimuat")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Offers", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+
+def _handle_email_site_input(message: Message) -> None:
+    uid = message.from_user.id
+    if message.text.startswith("/"):
+        return
+    site = message.text.strip()
+    if not site:
+        return
+    set_state(uid, "email_site", site)
+    pending = get_state(uid, "_email_pending") or "domains"
+    chat = get_state(uid, "_email_chat") or message.chat.id
+    msg_id = get_state(uid, "_email_msg_id") or message.message_id
+    set_state(uid, "_email_pending", None)
+    set_state(uid, "_email_chat", None)
+    set_state(uid, "_email_msg_id", None)
+    if pending == "domains":
+        _email_domains_render(chat, msg_id, uid, site)
+    else:
+        _email_offers_render(chat, msg_id, uid, site)
 
 
 def _show_email_list(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
@@ -735,7 +776,7 @@ def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) ->
     uid = call.from_user.id
     size = 15
     now = datetime.now(timezone.utc)
-    from_ = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from_ = (now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
     to = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
         data = api.activation_history(from_=from_, to=to, page=page, size=size)

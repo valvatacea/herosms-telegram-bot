@@ -273,11 +273,15 @@ class HeroSMS:
     def reorder_email(self, email_id: str) -> Dict:
         return self._post(f"/emails/{email_id}/reorder")
 
-    def email_domains(self) -> Dict:
-        return self._get("/emails/domains")
+    def email_domains(self, site: Optional[str] = None) -> Dict:
+        params: Dict[str, Any] = {}
+        if site: params["site"] = site
+        return self._get("/emails/domains", params)
 
-    def email_offers(self) -> Dict:
-        return self._get("/emails/offers")
+    def email_offers(self, site: Optional[str] = None) -> Dict:
+        params: Dict[str, Any] = {}
+        if site: params["site"] = site
+        return self._get("/emails/offers", params)
 
     # ── SMS-Activate compatible (query action) ───────────────────
 
