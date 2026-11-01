@@ -182,34 +182,34 @@ def _idr_rate() -> float | None:
 
 
 def _fmt_price(usd, uid) -> str:
-    """Harga sesuai setting mata uang: USD polos, atau Rp saja (kurs)."""
+    """Harga sesuai setting mata uang: $USD, atau Rp saja (kurs)."""
     usd = str(usd)
     if usd in ("-", ""):
         return code(usd)
     if (get_state(uid, "settings_currency") or "usd") != "idr":
-        return code(usd)
+        return code("$" + usd)
     rate = _idr_rate()
     if not rate:
-        return code(usd)
+        return code("$" + usd)
     try:
         rp = f"{int(float(usd) * rate):,}".replace(",", ".")
     except (TypeError, ValueError):
-        return code(usd)
+        return code("$" + usd)
     return code(f"Rp{rp}")
 
 
 def _idr_label(usd, uid) -> str:
-    """Label tombol harga: '🇮🇩 Rp...' saat mode IDR, '💵 USD' saat USD."""
+    """Label tombol harga: '🇮🇩 Rp...' saat mode IDR, '💵 $USD' saat USD."""
     usd = str(usd)
     if (get_state(uid, "settings_currency") or "usd") != "idr":
-        return f"💵 {usd}"
+        return f"💵 ${usd}"
     rate = _idr_rate()
     if not rate:
-        return f"💵 {usd}"
+        return f"💵 ${usd}"
     try:
         rp = f"{int(float(usd) * rate):,}".replace(",", ".")
     except (TypeError, ValueError):
-        return f"💵 {usd}"
+        return f"💵 ${usd}"
     return f"🇮🇩 Rp{rp}"
 
 
@@ -565,7 +565,7 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
             _edit(chat, msg_id, error_msg("Stok Kosong", f"Tidak ada nomor untuk layanan {service} negara {country}"), back_menu())
             _answer(call, "Stok kosong", alert=True)
             return
-        lines = [f"🔹 *Pilih Harga OTP*", ""]
+        lines = [f"🔹 *Pilih Harga*", ""]
         p_sname = esc(get_state(uid, "buy_service_name") or service)
         p_cname = esc(get_state(uid, "buy_country_name") or country)
         lines.append(f"Layanan: {p_sname} \\| Negara: {p_cname}")
@@ -594,7 +594,7 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: Callba
     _edit(
         chat,
         msg_id,
-        buy_confirm_msg(cname, sname, price, "", country, service, duration, _fmt_price(price, uid)),
+        buy_confirm_msg(cname, sname, price, "", duration, _fmt_price(price, uid)),
         buy_confirm_keyboard(country, service),
     )
     _answer(call, "Konfirmasi pembelian")
