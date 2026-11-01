@@ -76,7 +76,7 @@ def buy_countries_keyboard(items):
             cid = str(item)
         is_id = str(cid) == "6" or str(cid).lower() in {"id", "indonesia"}
         label = f"🇮🇩 {name}" if is_id else f"🌍 {name}"
-        buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}"))
+        buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}:{str(name)[:30]}"))
     kb.add(*buttons)
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
     return kb
@@ -93,7 +93,7 @@ def buy_services_keyboard(items):
         else:
             name = str(item)
             sid = str(item)
-        buttons.append(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}"))
+        buttons.append(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}:{str(name)[:30]}"))
     kb.add(*buttons)
     kb.add(InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
     return kb

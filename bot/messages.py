@@ -259,11 +259,15 @@ def email_detail_msg(data: Dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def buy_confirm_msg(country: str, service: str, price: str, currency: str = "") -> str:
+def buy_confirm_msg(country: str, service: str, price: str, currency: str = "", country_id: str = "", service_id: str = "", duration: str = "-") -> str:
+    c_line = f"{esc(str(country))} {code(str(country_id))}" if country_id and str(country_id) != str(country) else esc(str(country))
+    s_line = f"{esc(str(service))} {code(str(service_id))}" if service_id and str(service_id) != str(service) else esc(str(service))
     return (
         f"{header('🛒 Konfirmasi Pembelian', 'Review sebelum transaksi')}\n"
-        f"{bold('Negara:')} {esc(str(country))}\n"
-        f"{bold('Layanan:')} {esc(str(service))}\n"
-        f"{bold('Harga:')} {code(str(price))} {code(str(currency))}\n\n"
+        f"{bold('Negara:')} {c_line}\n"
+        f"{bold('Layanan:')} {s_line}\n"
+        f"{bold('Harga:')} {code(str(price))} {code(str(currency))}\n"
+        f"{bold('Durasi:')} {esc(str(duration))}\n"
+        f"{bold('Nomor:')} akan ditampilkan setelah pembelian\\.\n\n"
         "Lanjutkan pembelian?"
     )

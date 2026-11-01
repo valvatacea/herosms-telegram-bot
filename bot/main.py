@@ -248,12 +248,18 @@ def on_callback(call: CallbackQuery) -> None:
             _show_transactions(chat, msg_id, call)
 
         elif data.startswith("buy:country:"):
-            country = data.split(":", 2)[2]
+            parts = data.split(":", 3)
+            country = parts[2]
             set_state(uid, "buy_country", country)
+            if len(parts) > 3 and parts[3]:
+                set_state(uid, "buy_country_name", parts[3])
             _show_services_for_buy(chat, msg_id, uid, country, call)
 
         elif data.startswith("buy:service:"):
-            service = data.split(":", 2)[2]
+            parts = data.split(":", 3)
+            service = parts[2]
+            if len(parts) > 3 and parts[3]:
+                set_state(uid, "buy_service_name", parts[3])
             _show_buy_prices(chat, msg_id, uid, service, call)
 
         elif data.startswith("buy:price:"):
@@ -489,11 +495,23 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
 def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: CallbackQuery) -> None:
     country = get_state(uid, "buy_country") or "-"
     service = get_state(uid, "buy_service") or "-"
+    cname = get_state(uid, "buy_country_name") or country
+    sname = get_state(uid, "buy_service_name") or service
     set_state(uid, "buy_price", price)
+    duration = "-"
+    try:
+        cd = api.custom_durations()
+        node = cd.get("data", {}).get(service, {}) if isinstance(cd, dict) else {}
+        minutes = node.get(str(country)) or node.get("0")
+        if minutes:
+            duration = f"{minutes} menit"
+    except Exception:
+        pass
+    set_state(uid, "buy_duration", duration)
     _edit(
         chat,
         msg_id,
-        buy_confirm_msg(country, service, price, ""),
+        buy_confirm_msg(cname, sname, price, "", country, service, duration),
         buy_confirm_keyboard(country, service),
     )
     _answer(call, "Konfirmasi pembelian")
