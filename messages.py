@@ -1,0 +1,193 @@
+"""Format pesan agar rapi, rapi, dan ramah pengguna."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+
+def esc(text: str) -> str:
+    """Escape karakter khusus MarkdownV2."""
+    for ch in r"_*[]()~`>#+-=|{}.!":
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
+def bold(text: str) -> str:
+    return f"*{esc(text)}*"
+
+
+def code(text: str) -> str:
+    return f"`{esc(text)}`"
+
+
+def header(title: str, subtitle: str = "") -> str:
+    lines = [f"🔹 *{esc(title)}*"]
+    if subtitle:
+        lines.append(f"_{esc(subtitle)}_")
+    return "\n".join(lines) + "\n"
+
+
+def balance_msg(data: Dict) -> str:
+    bal = data.get("balance", data.get("available", "—"))
+    currency = data.get("currency", "")
+    return (
+        f"{header('Saldo Akun', 'HeroSMS')}"
+        f"{bold('Tersedia:')} `{bal} {currency}`\n"
+    )
+
+
+def stats_msg(data: Dict) -> str:
+    lines = [header("Statistik Pengguna", "HeroSMS")]
+    for key, val in data.items():
+        lines.append(f"• {esc(str(key))}: {code(str(val))}")
+    return "\n".join(lines) + "\n"
+
+
+def countries_msg(data: Dict) -> str:
+    items = data.get("data", data) if isinstance(data, dict) else data
+    if not isinstance(items, list):
+        items = [items]
+    lines = [header("Daftar Negara", "Pilih negara untuk beli nomor")]
+    for item in items[:30]:
+        if isinstance(item, dict):
+            name = item.get("name", "-")
+            code_ = item.get("code", item.get("id", "-"))
+            lines.append(f"🇮🇩 {esc(name)} — {code(code_)}")
+        else:
+            lines.append(f"• {esc(str(item))}")
+    if len(items) > 30:
+        lines.append(f"\n_…dan {len(items) - 30} negara lainnya._")
+    return "\n".join(lines) + "\n"
+
+
+def services_msg(data: Dict) -> str:
+    items = data.get("data", data) if isinstance(data, dict) else data
+    if not isinstance(items, list):
+        items = [items]
+    lines = [header("Daftar Layanan", "Pilih layanan verifikasi")]
+    for item in items[:40]:
+        if isinstance(item, dict):
+            name = item.get("name", "-")
+            sid = item.get("id", item.get("code", "-"))
+            lines.append(f"📱 {esc(name)} — {code(str(sid))}")
+        else:
+            lines.append(f"• {esc(str(item))}")
+    if len(items) > 40:
+        lines.append(f"\n_…dan {len(items) - 40} layanan lainnya._")
+    return "\n".join(lines) + "\n"
+
+
+def prices_msg(data: Dict) -> str:
+    lines = [header("Harga Aktivasi", "Per layanan / negara")]
+    if isinstance(data, dict):
+        for key, val in data.items():
+            lines.append(f"• {esc(str(key))}: {code(str(val))}")
+    else:
+        lines.append(code(str(data)))
+    return "\n".join(lines) + "\n"
+
+
+def activation_detail(act: Dict) -> str:
+    lines = [
+        f"{header('Detail Aktivasi', f'ID: {code(str(act.get("id","-")))}')}",
+        f"{bold('Status:')} {esc(str(act.get('status','-')))}",
+        f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
+        f"{bold('Kode negara:')} {code(str(act.get('phoneCode','-')))}",
+        f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
+        f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
+        f"{bold('Biaya:')} {code(str(act.get('cost','-')))} {code(str(act.get('currency','')))}",
+        f"{bold('Dibuat:')} {code(str(act.get('createDate','-')))}",
+    ]
+    more = act.get("moreCodes")
+    if more:
+        lines.append(f"{bold('Kode terima:')} {esc(str(more))}")
+    return "\n".join(lines) + "\n"
+
+
+def active_list_msg(data: Dict) -> str:
+    items = data.get("data", []) if isinstance(data, dict) else []
+    lines = [header("Aktivasi Aktif", "Klik tombol di bawah untuk aksi")]
+    if not items:
+        return lines[0] + "\nBelum ada aktivasi aktif.\n"
+    for item in items[:15]:
+        if isinstance(item, dict):
+            aid = item.get("id", "-")
+            phone = item.get("phone", "-")
+            status = item.get("status", "-")
+            cost = item.get("cost", "-")
+            lines.append(
+                f"• {code(str(aid))} | {code(str(phone))} | {esc(str(status))} | {code(str(cost))}"
+            )
+    else:
+        lines.extend(esc(str(x)) for x in items)
+    if len(items) > 15:
+        lines.append(f"\n_…dan {len(items) - 15} aktivasi lain._")
+    return "\n".join(lines) + "\n"
+
+
+def history_msg(data: Dict) -> str:
+    items = data.get("data", []) if isinstance(data, dict) else []
+    lines = [header("Riwayat Aktivasi", "Aktivasi sebelumnya")]
+    if not items:
+        return lines[0] + "\nBelum ada riwayat.\n"
+    for item in items[:15]:
+        if isinstance(item, dict):
+            aid = item.get("id", "-")
+            phone = item.get("phone", "-")
+            status = item.get("status", "-")
+            cost = item.get("cost", "-")
+            date = item.get("createDate", "-")
+            lines.append(
+                f"• {code(str(aid))} | {code(str(phone))} | {esc(str(status))} | {code(str(cost))} | {code(str(date))}"
+            )
+    if len(items) > 15:
+        lines.append(f"\n_…dan {len(items) - 15} entri lain._")
+    return "\n".join(lines) + "\n"
+
+
+def otp_msg(activation_id: str, data: Any) -> str:
+    lines = [header(f"OTP - Aktivasi {code(str(activation_id))}", "Kode verifikasi")]
+    if isinstance(data, dict):
+        code_val = data.get("code", data.get("otp", "-"))
+        date = data.get("date", data.get("createDate", "-"))
+        lines.append(f"{bold('Kode:')} {code(str(code_val))}")
+        if date != "-":
+            lines.append(f"{bold('Waktu:')} {code(str(date))}")
+    elif isinstance(data, list):
+        for i, item in enumerate(data[:10], 1):
+            if isinstance(item, dict):
+                code_val = item.get("code", item.get("otp", "-"))
+                date = item.get("date", item.get("createDate", "-"))
+                lines.append(f"{i}. {code(str(code_val))} ({code(str(date))})")
+            else:
+                lines.append(f"{i}. {code(str(item))}")
+    else:
+        lines.append(code(str(data)))
+    return "\n".join(lines) + "\n"
+
+
+def purchase_success(act: Dict) -> str:
+    lines = [
+        f"{header('✅ Nomor Dibeli', 'Aktivasi berhasil dibuat')}",
+        f"{bold('ID:')} {code(str(act.get('id','-')))}",
+        f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
+        f"{bold('Kode negara:')} {code(str(act.get('phoneCode','-')))}",
+        f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
+        f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
+        f"{bold('Biaya:')} {code(str(act.get('cost','-')))} {code(str(act.get('currency','')))}",
+        f"\nGunakan tombol di bawah untuk ambil OTP atau selesaikan aktivasi.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def welcome_msg() -> str:
+    return (
+        f"{header('🤖 HeroSMS Bot', 'Manajemen aktivasi SMS/OTP via Telegram')}\n"
+        "Bot ini memungkinkan Anda:\n"
+        "• Cek saldo & statistik akun\n"
+        "• Lihat daftar negara, layanan, dan harga\n"
+        "• Beli nomor verifikasi\n"
+        "• Terima OTP langsung di chat\n"
+        "• Selesaikan, batalkan, atau perpanjang aktivasi\n"
+        "\nPilih menu di bawah untuk memulai 👇\n"
+    )
