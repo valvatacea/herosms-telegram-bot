@@ -425,66 +425,9 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
         _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
         _answer(call, str(exc), alert=True)
 
-
-def _lookup_price(country: str, service: str) -> tuple[str, str]:
-    """Coba ambil harga dari legacy getPrices. Kembalikan (price, currency).
-    
-    Coba beberapa bentuk respons yang mungkin sebelum gagarkan '-'."""
-    try:
-        data = api.legacy("getPrices")
-        if not isinstance(data, dict):
-            return "-", ""
-
-        country_l = country.lower()
-        service_l = service.lower()
-
-        # Format 1: {data: [{service, country, price, currency}, ...]}
-        if isinstance(data.get("data"), list):
-            for item in data["data"]:
-                if not isinstance(item, dict):
-                    continue
-                if (str(item.get("service", "")).lower() == service_l
-                        and str(item.get("country", "")).lower() == country_l):
-                    return str(item.get("price", "-")), str(item.get("currency", ""))
-
-        # Helper: cocokkan key dalam nested dict
-        def _match_nested(outer):
-            for k, v in outer.items():
-                if not isinstance(v, dict):
-                    continue
-                if str(k).lower() == service_l:
-                    for ck, cv in v.items():
-                        if str(ck).lower() == country_l:
-                            return _extract_price(cv)
-                if str(k).lower() == country_l:
-                    for sk, sv in v.items():
-                        if str(sk).lower() == service_l:
-                            return _extract_price(sv)
-            return None
-
-        def _extract_price(val):
-            if isinstance(val, dict):
-                return str(val.get("price", "-")), str(val.get("currency", ""))
-            return str(val), ""
-
-        # Format 2: {service: {country: price}} / {country: {service: price}}
-        result = _match_nested(data)
-        if result:
-            return result
-
-        # Format 3: flat {service_country: price}
-        for k, v in data.items():
-            if f"{service}_{country}".lower() == str(k).lower():
-                return str(v), ""
-
-    except Exception:  # noqa: BLE001
-        pass
-    return "-", ""
-
-
 def _show_buy_confirm(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
     country = get_state(uid, "buy_country") or "-"
-    price, currency = _lookup_price(country, service)
+    price, currency = api.lookup_price(country, service)
     set_state(uid, "buy_service", service)
     set_state(uid, "buy_price", price)
     set_state(uid, "buy_currency", currency)
@@ -827,7 +770,7 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
             key = (country, service)
             if key not in price_cache:
                 try:
-                    cur_price, cur_cur = _lookup_price(country, service)
+                    cur_price, cur_cur = api.lookup_price(country, service)
                 except Exception:  # noqa: BLE001
                     cur_price, cur_cur = hist_price, hist_cur
                 price_cache[key] = (cur_price, cur_cur)
