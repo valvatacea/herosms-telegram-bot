@@ -122,7 +122,7 @@ def _watch_toggle(uid: int, aid: str) -> bool:
     return True
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("herosms-bot")
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="MarkdownV2")
@@ -153,16 +153,19 @@ def _edit(chat: int, msg_id: int, text: str, markup=None) -> None:
 
 @bot.message_handler(commands=["start"])
 def cmd_start(message: Message) -> None:
+    log.debug(f"command /start uid={message.chat.id}")
     bot.reply_to(message, welcome_msg(), reply_markup=main_menu())
 
 
 @bot.message_handler(commands=["menu"])
 def cmd_menu(message: Message) -> None:
+    log.debug(f"command /menu uid={message.chat.id}")
     bot.send_message(message.chat.id, "Menu utama", reply_markup=main_menu())
 
 
 @bot.message_handler(commands=["help"])
 def cmd_help(message: Message) -> None:
+    log.debug(f"command /help uid={message.chat.id}")
     text = (
         "🔹 *Bantuan*\n"
         "Perintah yang tersedia:\n"
@@ -189,6 +192,7 @@ def on_callback(call: CallbackQuery) -> None:
     uid = call.from_user.id
     chat = call.message.chat.id
     msg_id = call.message.message_id
+    log.debug(f"callback uid={uid} chat={chat} data={data}")
 
     try:
         if data == "menu:main":
@@ -871,6 +875,7 @@ def _start_otp_poller(bot, interval: int = 30):
                                 watch[aid] = latest_text
                                 changed = True
                                 set_state(uid, "otp_watch", watch)
+                                log.debug(f"OTP baru aid={aid} uid={uid}")
                                 bot.send_message(
                                     uid,
                                     f"🔔 *OTP Baru untuk Aktivasi {aid}*\n\nKode: *{latest_text}*",
