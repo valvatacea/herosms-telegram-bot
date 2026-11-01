@@ -1046,6 +1046,9 @@ def _start_otp_poller(bot, interval: int = 30):
                     for aid in list(watch.keys()):
                         if watch.get(aid) == "off":
                             continue  # pemain telah mematikan notifikasi untuk activation ini
+                        if not aid or str(aid).strip() in ("", "-", "None"):
+                            watch.pop(aid, None)  # bersihkan entri korup dari data lama
+                            continue
                         try:
                             data = api.otp_list(aid, page=1, size=5)
                             items = data.get("data", []) if isinstance(data, dict) else []
