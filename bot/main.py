@@ -538,10 +538,11 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
         set_state(uid, "buy_country", country)
         data = api.legacy("getServicesList")
         items = _legacy_items(data)
+        cname = esc(get_state(uid, "buy_country_name") or country)
         _edit(
             chat,
             msg_id,
-            "🔹 *Layanan \\- {country}*".format(country=country) + "\n\nPilih layanan \\(populer ditampilkan paling atas\\):",
+            "🔹 *Layanan \\- {country}*".format(country=cname) + "\n\nPilih layanan:",
             buy_services_keyboard(items),
         )
         _answer(call, "Pilih layanan")
@@ -565,7 +566,9 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
             _answer(call, "Stok kosong", alert=True)
             return
         lines = [f"🔹 *Pilih Harga OTP*", ""]
-        lines.append(f"Layanan: {code(service)} \\| Negara: {code(country)}")
+        p_sname = esc(get_state(uid, "buy_service_name") or service)
+        p_cname = esc(get_state(uid, "buy_country_name") or country)
+        lines.append(f"Layanan: {p_sname} \\| Negara: {p_cname}")
         lines.append("")
         for price, count in entries:
             lines.append(f"• {_fmt_price(price, uid)} — stok {code(count)}")
