@@ -63,8 +63,9 @@ def activation_actions(activation_id: str, watching: bool = False, status=None) 
         # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),
     )
-    # Reaktivasi hanya untuk aktivasi yang sudah selesai (status 6/10)
-    if status is None or str(status) in ("6", "10"):
+    # Reaktivasi hanya untuk aktivasi yang sudah selesai (status 6/10);
+    # layar tanpa info status (OTP dsb.) menyembunyikannya secara default
+    if status is not None and str(status) in ("6", "10"):
         kb.add(InlineKeyboardButton("🔄 Reaktivasi", callback_data=f"act:reactivate:{activation_id}"))
     kb.add(InlineKeyboardButton("⬅️ Daftar Aktif", callback_data="menu:active"))
     kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
