@@ -586,7 +586,7 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: Callba
     sname = get_state(uid, "buy_service_name") or service
     set_state(uid, "buy_price", price)
     # Durasi default aktivasi OTP = 20 menit (custom-durations hanya untuk rent/produk kustom)
-    duration = "20 menit \\(default aktivasi\\)"
+    duration = "20 menit (default aktivasi)"
     set_state(uid, "buy_duration", duration)
     _edit(
         chat,
