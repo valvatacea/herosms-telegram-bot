@@ -33,9 +33,12 @@ def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyb
         InlineKeyboardButton("📋 Semua OTP", callback_data=f"otp:list:{activation_id}"),
         InlineKeyboardButton("🔄 Kirim Ulang SMS", callback_data=f"act:resend:{activation_id}"),
         InlineKeyboardButton("🔔 Nyalakan Notif OTP" if not watching else "🔕 Matikan Notif OTP", callback_data=f"otp:watch:{activation_id}"),
+    )
+    # Persis di bawah resend: batalkan bila OTP tidak datang (refund jika belum terima OTP)
+    kb.add(InlineKeyboardButton("🚫 OTP Tidak Muncul? Batalkan", callback_data=f"act:confirm:cancel:{activation_id}"))
+    kb.add(
         # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),
-        InlineKeyboardButton("❌ Batalkan", callback_data=f"act:confirm:cancel:{activation_id}"),
         InlineKeyboardButton("🔄 Reaktivasi", callback_data=f"act:reactivate:{activation_id}"),
         InlineKeyboardButton("⏳ Perpanjang", callback_data=f"act:prolong:{activation_id}"),
     )
