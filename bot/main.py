@@ -532,6 +532,15 @@ def _show_settings(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> Non
 def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
     try:
         data = api.user_stats()
+        # Kunci respons = kode (6/go) -> ubah ke nama (Indonesia/Telegram)
+        if isinstance(data, dict) and isinstance(data.get("data"), dict):
+            data = {"data": {
+                _country_name(c): {
+                    _service_name(s): v for s, v in sv.items()
+                }
+                for c, sv in data["data"].items()
+                if isinstance(sv, dict)
+            }}
         _edit(chat, msg_id, stats_msg(data), back_menu())
         _answer(call, "Statistik dimuat")
     except HeroSMSError as exc:
