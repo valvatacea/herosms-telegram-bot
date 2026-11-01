@@ -44,6 +44,63 @@ def activation_actions(activation_id: str) -> InlineKeyboardMarkup:
     return kb
 
 
+# ── Keyboard pembelian (negara & layanan, populer dulu) ─────────
+
+POPULAR_COUNTRY_IDS = ["id", "ID", "Indonesia", "indonesia"]
+POPULAR_SERVICE_IDS = ["wa", "whatsapp", "tg", "telegram", "fb", "facebook", "ig", "instagram", "sms", "sms-verify"]
+
+
+def _popular_first(items, popular_ids, id_key="id", name_key="name"):
+    """Urutkan item: yang populer dulu, lalu yang lain."""
+    popular_set = {str(p).lower() for p in popular_ids}
+    pop, rest = [], []
+    for it in items:
+        if not isinstance(it, dict):
+            rest.append(it)
+            continue
+        vid = str(it.get(id_key, it.get(name_key, ""))).lower()
+        (pop if vid in popular_set else rest).append(it)
+    return pop + rest
+
+
+def buy_countries_keyboard(items):
+    kb = InlineKeyboardMarkup(row_width=2)
+    ordered = _popular_first(items, POPULAR_COUNTRY_IDS)
+    buttons = []
+    for item in ordered[:20]:
+        name = item.get("name", "-")
+        cid = item.get("id", item.get("code", "-"))
+        is_id = str(cid).lower() in {"id", "indonesia"}
+        label = f"🇮🇩 {name}" if is_id else f"🌍 {name}"
+        buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}"))
+    kb.add(*buttons)
+    kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
+    return kb
+
+
+def buy_services_keyboard(items):
+    kb = InlineKeyboardMarkup(row_width=2)
+    ordered = _popular_first(items, POPULAR_SERVICE_IDS)
+    buttons = []
+    for item in ordered[:25]:
+        name = item.get("name", "-")
+        sid = item.get("id", item.get("code", "-"))
+        buttons.append(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}"))
+    kb.add(*buttons)
+    kb.add(InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
+    return kb
+
+
+def buy_confirm_keyboard(country: str, service: str) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        InlineKeyboardButton("✅ Ya, beli", callback_data=f"buy:confirm:{country}:{service}"),
+        InlineKeyboardButton("❌ Batal", callback_data="menu:buy_activation"),
+    )
+    kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
+    return kb
+
+
 def confirm_keyboard(action: str, activation_id: str) -> InlineKeyboardMarkup:
     """Konfirmasi sebelum tindakan destructive (finish / cancel)."""
     kb = InlineKeyboardMarkup(row_width=2)

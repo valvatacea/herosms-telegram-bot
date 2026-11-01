@@ -244,3 +244,13 @@ def email_detail_msg(data: Dict) -> str:
     if data.get("createDate"):
         lines.append(f"{bold('Dibuat:')} {code(str(data.get('createDate')))}")
     return "\n".join(lines) + "\n"
+
+
+def buy_confirm_msg(country: str, service: str, price: str, currency: str = "") -> str:
+    return (
+        f"{header('🛒 Konfirmasi Pembelian', 'Review sebelum transaksi')}\n"
+        f"{bold('Negara:')} {esc(str(country))}\n"
+        f"{bold('Layanan:')} {esc(str(service))}\n"
+        f"{bold('Harga:')} {code(str(price))} {code(str(currency))}\n\n"
+        "Lanjutkan pembelian?"
+    )

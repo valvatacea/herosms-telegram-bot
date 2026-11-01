@@ -18,6 +18,9 @@ from bot.keyboards import (
     activation_actions,
     confirm_keyboard,
     email_menu,
+    buy_countries_keyboard,
+    buy_services_keyboard,
+    buy_confirm_keyboard,
 )
 from bot.messages import (
     esc,
@@ -35,6 +38,7 @@ from bot.messages import (
     email_list_msg,
     email_detail_msg,
     confirm_msg,
+    buy_confirm_msg,
     error_msg,
     success_msg,
 )
@@ -142,7 +146,13 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data.startswith("buy:service:"):
             service = data.split(":", 2)[2]
-            _do_purchase(chat, msg_id, uid, service, call)
+            _show_buy_confirm(chat, msg_id, uid, service, call)
+
+        elif data.startswith("buy:confirm:"):
+            parts = data.split(":", 3)
+            country = parts[2]
+            service = parts[3]
+            _do_purchase(chat, msg_id, uid, service, country, call)
 
         elif data.startswith("otp:last:"):
             aid = data.split(":", 2)[2]
@@ -280,17 +290,7 @@ def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> No
     try:
         data = api.legacy("getCountries")
         items = data.get("data", data) if isinstance(data, dict) else data
-        kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-        buttons = []
-        for item in items[:20]:
-            if isinstance(item, dict):
-                name = item.get("name", "-")
-                cid = item.get("id", item.get("code", "-"))
-                buttons.append(telebot.types.InlineKeyboardButton(
-                    f"🌍 {name}", callback_data=f"buy:country:{cid}"))
-        kb.add(*buttons)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
-        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", kb)
+        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara (Indonesia ditampilkan paling atas):", buy_countries_keyboard(items))
         _answer(call, "Pilih negara")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
@@ -299,35 +299,72 @@ def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> No
 
 def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call: CallbackQuery) -> None:
     try:
+        set_state(uid, "buy_country", country)
         data = api.legacy("getServicesList")
         items = data.get("data", data) if isinstance(data, dict) else data
-        kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-        buttons = []
-        for item in items[:25]:
-            if isinstance(item, dict):
-                name = item.get("name", "-")
-                sid = item.get("id", item.get("code", "-"))
-                buttons.append(telebot.types.InlineKeyboardButton(
-                    f"📱 {name}", callback_data=f"buy:service:{sid}"))
-        kb.add(*buttons)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
-        _edit(chat, msg_id, f"🔹 *Layanan - {country}*\n\nPilih layanan:", kb)
+        _edit(
+            chat,
+            msg_id,
+            f"🔹 *Layanan - {country}*\n\nPilih layanan (populer ditampilkan paling atas):",
+            buy_services_keyboard(items),
+        )
         _answer(call, "Pilih layanan")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
         _answer(call, str(exc), alert=True)
 
 
-def _do_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
-    country = get_state(uid, "buy_country")
+def _lookup_price(country: str, service: str) -> tuple[str, str]:
+    """Coba ambil harga dari legacy getPrices. Kembalikan (price, currency)."""
+    try:
+        data = api.legacy("getPrices")
+        if isinstance(data, dict):
+            # Format yang mungkin: {service: {country: price}} atau {data: [...]}
+            for key, val in data.items():
+                if key == "data" and isinstance(val, list):
+                    for item in val:
+                        if isinstance(item, dict):
+                            if str(item.get("service", "")) == service and str(item.get("country", "")) == country:
+                                return str(item.get("price", "-")), str(item.get("currency", ""))
+                elif key == service and isinstance(val, dict):
+                    for c, p in val.items():
+                        if c.lower() == country.lower():
+                            return str(p), ""
+    except Exception:  # noqa: BLE001
+        pass
+    return "-", ""
+
+
+def _show_buy_confirm(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
+    country = get_state(uid, "buy_country") or "-"
+    price, currency = _lookup_price(country, service)
+    set_state(uid, "buy_service", service)
+    _edit(
+        chat,
+        msg_id,
+        buy_confirm_msg(country, service, price, currency),
+        buy_confirm_keyboard(country, service),
+    )
+    _answer(call, "Konfirmasi pembelian")
+
+
+def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | None = None, call: CallbackQuery | None = None) -> None:
+    if country is None:
+        country = get_state(uid, "buy_country")
     try:
         act = api.buy_activation(service=service, country=country)
         clear_state(uid)
-        _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", ""))))
-        _answer(call, "Nomor dibeli")
+        if call:
+            _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", ""))))
+            _answer(call, "Nomor dibeli")
+        else:
+            bot.send_message(chat, purchase_success(act), reply_markup=activation_actions(str(act.get("id", ""))))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
-        _answer(call, str(exc), alert=True)
+        if call:
+            _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
+            _answer(call, str(exc), alert=True)
+        else:
+            bot.send_message(chat, error_msg("Gagal Beli Nomor", str(exc)), reply_markup=back_menu())
 
 
 # ── Konfirmasi aksi destructive ─────────────────────────────────
