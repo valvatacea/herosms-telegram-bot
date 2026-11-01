@@ -35,9 +35,6 @@ from bot.messages import (
     status_name,
     balance_msg,
     stats_msg,
-    countries_msg,
-    services_msg,
-    prices_msg,
     activation_detail,
     active_list_msg,
     history_msg,
@@ -334,15 +331,6 @@ def on_callback(call: CallbackQuery) -> None:
         elif data == "menu:stats":
             _show_stats(chat, msg_id, call)
 
-        elif data == "menu:countries":
-            _show_countries(chat, msg_id, call)
-
-        elif data == "menu:services":
-            _show_services(chat, msg_id, call)
-
-        elif data == "menu:prices":
-            _show_prices(chat, msg_id, call)
-
         elif data == "menu:buy_activation":
             _start_buy_flow(chat, msg_id, uid, call)
 
@@ -546,36 +534,6 @@ def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg(t(lg, "gagal_cek_statistik"), str(exc)), back_menu(lg))
         _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
-
-
-def _show_countries(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    try:
-        data = api.legacy("getCountries")
-        _edit(chat, msg_id, countries_msg(data), back_menu())
-        _answer(call, "Negara dimuat")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _show_services(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    try:
-        data = api.legacy("getServicesList")
-        _edit(chat, msg_id, services_msg(data), back_menu())
-        _answer(call, "Layanan dimuat")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _show_prices(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    try:
-        data = api.legacy("getPrices")
-        _edit(chat, msg_id, prices_msg(data), back_menu())
-        _answer(call, "Harga dimuat")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Harga", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
 
 
 def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:

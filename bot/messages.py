@@ -112,77 +112,7 @@ def stats_msg(data: Dict, lang: str = "id") -> str:
     return "\n".join(lines) + "\n"
 
 
-def countries_msg(data: Dict, lang: str = "id") -> str:
-    if isinstance(data, dict) and isinstance(data.get("data"), (list, dict)):
-        data = data["data"]
-    items = list(data.values()) if isinstance(data, dict) else data
-    if not isinstance(items, list):
-        items = [items]
-    lines = [header(t(lang, "negara_judul"), t(lang, "negara_sub"))]
-    if not items:
-        return lines[0] + "\n" + esc(t(lang, "negara_kosong")) + "\n"
-    for item in items[:30]:
-        if isinstance(item, dict):
-            name = item.get("eng", item.get("name", "-"))
-            code_ = item.get("code", item.get("id", "-"))
-            lines.append(f"{flag(name)} {esc(name)} — {code(code_)}")
-        else:
-            lines.append(f"• {esc(str(item))}")
-    if len(items) > 30:
-        lines.append(f"\n_{t(lang, 'negara_lainnya', n=len(items) - 30)}\\._")
-    return "\n".join(lines) + "\n"
 
-
-def services_msg(data: Dict, lang: str = "id") -> str:
-    if isinstance(data, dict) and isinstance(data.get("services"), list):
-        data = data["services"]
-    items = list(data.values()) if isinstance(data, dict) else data
-    if not isinstance(items, list):
-        items = [items]
-    lines = [header(t(lang, "layanan_judul"), t(lang, "layanan_sub"))]
-    if not items:
-        return lines[0] + "\n" + esc(t(lang, "layanan_kosong")) + "\n"
-    for item in items[:40]:
-        if isinstance(item, dict):
-            name = item.get("name", "-")
-            sid = item.get("id", item.get("code", "-"))
-            lines.append(f"📱 {esc(name)} — {code(str(sid))}")
-        else:
-            lines.append(f"• {esc(str(item))}")
-    if len(items) > 40:
-        lines.append(f"\n_{t(lang, 'layanan_lainnya', n=len(items) - 40)}\\._")
-    return "\n".join(lines) + "\n"
-
-
-def prices_msg(data: Dict, lang: str = "id") -> str:
-    lines = [header(t(lang, "harga_judul"), t(lang, "harga_sub"))]
-    if isinstance(data, dict):
-        if isinstance(data.get("data"), (list, dict)):
-            data = data["data"]
-        entries = list(data.items()) if isinstance(data, dict) else []
-        if not entries:
-            return lines[0] + "\n" + esc(t(lang, "harga_kosong")) + "\n"
-        for key, val in entries[:15]:
-            s = str(val)
-            if len(s) > 80:
-                s = s[:77] + "..."
-            lines.append(f"• {esc(str(key))}: {code(s)}")
-        if len(entries) > 15:
-            lines.append(f"\n_{t(lang, 'negara_lainnya', n=len(entries) - 15)}\\._")
-    else:
-        lines.append(code(str(data)[:300]))
-    return "\n".join(lines) + "\n"
-
-
-_STATUS_KEYS = {
-    1: "st_siap",
-    2: "st_kode",
-    3: "st_resend",
-    4: "st_menunggu",
-    6: "st_selesai",
-    8: "st_batal",
-    10: "st_refund",
-}
 
 
 def status_name(s, lang: str = "id") -> str:
