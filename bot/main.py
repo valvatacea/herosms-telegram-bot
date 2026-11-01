@@ -688,6 +688,9 @@ def _do_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
         _edit(chat, msg_id, success_msg("Aktivasi Dibatalkan", f"Aktivasi ID {aid} telah dibatalkan."), back_menu())
         _answer(call, "Dibatalkan")
     except HeroSMSError as exc:
+        if "EARLY_CANCEL_DENIED" in str(exc) or "first 2 minutes" in str(exc):
+            _answer(call, "Tunggu 2 menit setelah beli sebelum batalkan. Coba lagi setelah itu.", alert=True)
+            return
         _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, _alert("Error", exc), alert=True)
 
