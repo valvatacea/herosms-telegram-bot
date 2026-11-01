@@ -133,6 +133,15 @@ def _answer(call: CallbackQuery, text: str, alert: bool = False) -> None:
     bot.answer_callback_query(call.id, text, show_alert=alert)
 
 
+def _alert(prefix: str, exc: Exception) -> str:
+    """Teks alert callback query yang belum melebihi batas Telegram (~200 char)."""
+    msg = str(exc)
+    budget = 200 - len(prefix) - 3  # 3 = ": ..."
+    if len(msg) > budget:
+        msg = msg[:budget].rsplit(" ", 1)[0] + "..."
+    return f"{prefix}: {msg}"
+
+
 def _edit(chat: int, msg_id: int, text: str, markup=None) -> None:
     try:
         bot.edit_message_text(text, chat, msg_id, reply_markup=markup)
@@ -339,11 +348,11 @@ def on_callback(call: CallbackQuery) -> None:
 
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Permintaan Gagal", str(exc)), back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _answer(call, _alert("Error", exc), alert=True)
     except Exception as exc:  # noqa: BLE001
         log.exception("callback error")
         _edit(chat, msg_id, error_msg("Error Tak Terduga", str(exc)), back_menu())
-        _answer(call, str(exc), alert=True)
+        _answer(call, _alert("Error tak terduga", exc), alert=True)
 
 
 # ── Helper tampilan ─────────────────────────────────────────────
