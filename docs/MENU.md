@@ -46,9 +46,11 @@ Nomor HP hanya ada SETELAH pembelian sukses (di-assign provider saat transaksi).
 
 | Tombol | Siklus |
 |--------|--------|
-| 🌐 Bahasa | Indonesia (English: segera) |
-| 💵 USD / 🇮🇩 IDR | Mata uang tampilan (IDR = konversi kurs, cache 24 jam) |
+| 🌐 Bahasa | 🇮🇩 Indonesia / 🇬🇧 English — seluruh layar, tombol, dan notifikasi ikut bahasa |
+| 💵 USD / 🇮🇩 IDR | Mata uang tampilan (default **IDR**; IDR = konversi kurs, cache 24 jam) |
 | ⏱ Auto-Batal OTP | NONAKTIF → 5 → 10 → 15 menit (batal otomatis tanpa OTP + refund + notif) |
+
+Catatan: tombol Reaktivasi hanya muncul untuk aktivasi berstatus selesai/dikembalikan (6/10); nomor offline ditolak server dengan pesan ramah ("Nomor Tidak Tersedia").
 
 ## Pesan sistem
 

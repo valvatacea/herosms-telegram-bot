@@ -15,7 +15,7 @@ Bot Telegram untuk **aktivasi OTP SMS** via [HeroSMS](https://hero-sms.com) (RES
 | ✅ Selesai / Batal | Selesaikan (tanpa refund) atau batalkan (refund; konfirmasi dulu) |
 | 🔄 Reaktivasi | Aktifkan kembali nomor yang sudah selesai |
 | 📋 Aktif / 📜 Riwayat | Aktivasi berjalan & riwayat selesai (14 hari, batas API) |
-| ⚙️ Pengaturan | Bahasa (struktur; Indonesia aktif) & mata uang USD/IDR + auto-batal |
+| ⚙️ Pengaturan | Bahasa **ID/EN penuh** & mata uang USD/IDR (default **IDR**) + auto-batal |
 
 ### Skema pembelian
 1. 🛒 Beli Nomor → daftar negara — urutan: **Indonesia → ASEAN → populer → alfabetis**; 15/halaman, 2 kolom, bendera per negara, `🔍` pencarian
@@ -55,7 +55,8 @@ herosms-telegram-bot/
 │   ├── client.py    # Klien HeroSMS (REST + legacy /stubs/handler_api.php)
 │   ├── messages.py  # Format MarkdownV2: esc, flag emoji, status_name, bar durasi
 │   ├── keyboards.py # Inline keyboard: menu, paginasi, pencarian
-│   ├── state.py     # Persistence per user (user_state.json)
+│   ├── lang.py      # Kamus terjemahan ID/EN (~160 kunci) + t(lang, key)
+│   ├── state.py     # Persistence per user (user_state.json, drop_state selektif)
 │   └── config.py    # Baca .env
 ├── tests/test_herosms.py  # 8 tes, unittest.mock, tanpa API nyata
 ├── docs/                 # MENU.md, API.md, DEPLOY.md, CONTRIBUTING.md
@@ -72,6 +73,7 @@ herosms-telegram-bot/
 - **Durasi aktivasi**: default 20 menit; custom-durations itu untuk produk sewa/kustom, tidak dipakai
 - **Kurs IDR**: open.er-api.com (gratis tanpa key; cache 24 jam)
 - **Bendera negara**: `pycountry` nama → ISO 2 huruf → emoji; alias untuk nama pendek ("DR Congo", "UAE", dst.); Kosovo di-hardcode 🇽🇰
+- **i18n**: semua teks pengguna lewat `bot/lang.py` (`t(lang, key)`); bahasa per user (`settings_lang`), default Indonesia. Nilai kamus yang melewati `esc()` tidak boleh membawa backslash; yang dipakai raw MarkdownV2 harus bawa `\| \( \) .` tunggal
 - **Riwayat provider**: hanya aktivasi yang benar-benar menerima OTP/berstatus selesai — batal/expired tanpa OTP tidak tercatat
 - **State**: `user_state.json` (gitignored) — purchases, OTP watch, halaman, settings per user
 

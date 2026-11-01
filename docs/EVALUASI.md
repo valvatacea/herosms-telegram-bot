@@ -1,6 +1,6 @@
 # Evaluasi Bot HeroSMS
 
-Tanggal: 2026-11-01 · Commit `37de872` · Cabang `master` (semua tersinkron ke GitHub)
+Tanggal: 2026-11-01 · Commit `e77d9c9` · Cabang `master` (semua tersinkron ke GitHub)
 
 ## Metrik kode (pygount)
 
@@ -35,13 +35,14 @@ Tanggal: 2026-11-01 · Commit `37de872` · Cabang `master` (semua tersinkron ke 
 ## Bug yang diperbaiki (belajar dari sesi ini)
 
 1. `clear_state()` di alur beli ikut menghapus settings → bahasa/mata uang balik default sendiri → diganti `drop_state(kunci buy_*)`
-2. Baterai keyboard 1 kolom saat refactor i18n → dikembalikan 2 kolom (`d7e25fb`)
+2. Keyboard 1 kolom saat refactor i18n → dikembalikan 2 kolom (`d7e25fb`)
 3. 409 conflict dua instance: `kill` ke wrapper bash tidak membunuh child python → restart wajib bunuh PID python eksplisit
-4. Escape MarkdownV2: nilai kamus yang melewati `esc()` tidak boleh membawa backslash; yang dipakai raw harus bawa `\| \( \) .` tunggal
+4. Regex hapus fungsi mati ikut menelan blok non-fungsi (`_STATUS_KEYS`) → NameError di layar detail; regex DOTALL `def...def` berbahaya kalau ada assignment di antara fungsi (`e77d9c9`)
+5. Escape MarkdownV2: nilai kamus yang melewati `esc()` tidak boleh membawa backslash; yang dipakai raw harus bawa `\| \( \) .` tunggal
 
 ## Risiko/sisa utang (sengaja ditunda)
 
-- **Dead code**: `_show_countries/_show_services/_show_prices` + 3 jawaban "dimuat" — tombolnya sudah dihapus dari menu, handler menunggu dibersihkan saat refactor router berikutnya
+- **Dead code sudah dibersihkan** (`686e52f`, −112 baris): router `menu:countries/services/prices` + handler + fungsi messages mati
 - **Progress bar sisa durasi** = snapshot statis (Telegram tak mendukung animasi pesan); refresh saat layar dibuka ulang
 - **Durasi default 20 menit** diasumsikan untuk semua aktivasi (custom-durations hanya untuk rent) — durasi nyata tetap dihitung dari `expiredAt − createdAt`
 - **Tes = plain assert**, tidak terdeteksi `pytest`/`unittest` — jalankan `PYTHONPATH=. .venv/bin/python3 tests/test_herosms.py`

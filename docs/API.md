@@ -26,7 +26,7 @@ Endpoint yang dipakai klien `bot/client.py`. Base URL REST: `https://hero-sms.co
 
 | Fungsi klien | Keterangan |
 |--------------|------------|
-| `legacy(action, params)` | `?action=...` — getBalance (teks `ACCESS_BALANCE:x`), getCountries (dict `{id: {eng,...}}`), getServicesList (`{services:[{code,name}]}`), getPrices (`{country:{service:{cost,count}}}`) |
+| `legacy(action, params)` | `?action=...` — getBalance (teks `ACCESS_BALANCE:x`), getCountries (dict `{id: {eng,...}}`), getServicesList (`{services:[{code,name}]}`). `getPrices` tak lagi dipakai (layar harga kini via `offers`) |
 | `resend_sms(id)` | `?action=setStatus` status=3 — kirim ulang SMS |
 
 ## Autentikasi

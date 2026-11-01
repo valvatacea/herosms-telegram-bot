@@ -45,7 +45,7 @@ After=network.target
 Type=simple
 WorkingDirectory=/root/herosms-telegram-bot
 Environment=HOME=/root
-ExecStart=/root/herosms-telegram-bot/.venv/bin/python /root/herosms-telegram-bot/bot/main.py
+ExecStart=/root/herosms-telegram-bot/.venv/bin/python -m bot.main
 Restart=always
 RestartSec=5
 User=root
