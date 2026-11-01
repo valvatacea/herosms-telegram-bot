@@ -176,8 +176,8 @@ def activation_detail(act: Dict) -> str:
         f"{bold('Status:')} {esc(str(act.get('status','-')))}",
         f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
-        f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
-        f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
+        f"{bold('Layanan:')} {esc(str(act.get('serviceName', act.get('service','-'))))}",
+        f"{bold('Negara:')} {esc(str(act.get('countryName', act.get('country','-'))))}",
         f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
         f"{bold('Dibuat:')} {code(str(act.get('createDate', act.get('createdAt','-'))))}",
     ]
@@ -258,8 +258,8 @@ def purchase_success(act: Dict, price_str: str = "") -> str:
         f"{bold('ID:')} {code(str(act.get('id','-')))}",
         f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
-        f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
-        f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
+        f"{bold('Layanan:')} {esc(str(act.get('serviceName', act.get('service','-'))))}",
+        f"{bold('Negara:')} {esc(str(act.get('countryName', act.get('country','-'))))}",
         f"{bold('Biaya:')} {cost_line}",
     ]
     try:

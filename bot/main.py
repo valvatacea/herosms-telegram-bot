@@ -214,6 +214,38 @@ def _idr_label(usd, uid) -> str:
     return f"🇮🇩 Rp{rp}"
 
 
+# ── Nama layanan/negara dari kode API (cache sekali) ──────────────
+
+_NAME_CACHE = {"countries": None, "services": None}
+
+
+def _country_name(cid) -> str:
+    if _NAME_CACHE["countries"] is None:
+        try:
+            data = api.legacy("getCountries")
+            vals = data.values() if isinstance(data, dict) else []
+            _NAME_CACHE["countries"] = {
+                str(v.get("id")): v.get("eng") for v in vals if isinstance(v, dict)
+            }
+        except Exception:
+            _NAME_CACHE["countries"] = {}
+    return (_NAME_CACHE["countries"] or {}).get(str(cid), str(cid))
+
+
+def _service_name(code) -> str:
+    if _NAME_CACHE["services"] is None:
+        try:
+            data = api.legacy("getServicesList")
+            _NAME_CACHE["services"] = {
+                str(i.get("code")): i.get("name")
+                for i in _legacy_items(data)
+                if isinstance(i, dict)
+            }
+        except Exception:
+            _NAME_CACHE["services"] = {}
+    return (_NAME_CACHE["services"] or {}).get(str(code), str(code))
+
+
 # ── Command ─────────────────────────────────────────────────────
 
 @bot.message_handler(commands=["start"])
@@ -629,6 +661,9 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
                 act = inner[0]
             elif isinstance(inner, dict) and inner:
                 act = inner
+        if isinstance(act, dict):
+            act["serviceName"] = _service_name(act.get("service") or service)
+            act["countryName"] = _country_name(act.get("country") or country)
         # Rekam transaksi
         price = get_state(uid, "buy_price", "-")
         currency = get_state(uid, "buy_currency", "")
@@ -766,6 +801,9 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
                 pass
         if not act:
             act = {"id": aid, "status": "-", "phone": "-"}
+        if isinstance(act, dict):
+            act["serviceName"] = _service_name(act.get("service"))
+            act["countryName"] = _country_name(act.get("country"))
         watch = _is_watching(call.from_user.id, str(aid))
         _edit(chat, msg_id, activation_detail(act), activation_actions(str(aid), watching=watch))
         _answer(call, "Detail aktivasi")
