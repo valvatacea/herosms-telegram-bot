@@ -32,7 +32,7 @@ def balance_msg(data: Dict) -> str:
     currency = data.get("currency", "")
     return (
         f"{header('💰 Saldo Akun', 'HeroSMS')}\n"
-        f"{bold('Tersedia:')} `{bal} {currency}`\n"
+        f"{bold('Tersedia:')} {code(bal)} {code(currency)}\n"
     )
 
 
