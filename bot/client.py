@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import requests
+import time
 from typing import Any, Dict, List, Optional
 
 
@@ -19,16 +20,41 @@ class HeroSMS:
         self.session.headers.update({"Authorization": f"Bearer {api_key}"})
 
     def _get(self, path: str, params: Optional[Dict] = None) -> Any:
-        r = self.session.get(f"{self.base_url}{path}", params=params, timeout=30)
-        return self._handle(r)
+        return self._request_with_retry("GET", path, params=params)
 
     def _post(self, path: str, json: Optional[Dict] = None, data: Optional[Dict] = None) -> Any:
-        r = self.session.post(f"{self.base_url}{path}", json=json, data=data, timeout=30)
-        return self._handle(r)
+        return self._request_with_retry("POST", path, json=json, data=data)
 
     def _delete(self, path: str) -> Any:
-        r = self.session.delete(f"{self.base_url}{path}", timeout=30)
-        return self._handle(r)
+        return self._request_with_retry("DELETE", path)
+
+    def _request_with_retry(
+        self, method: str, path: str, max_retries: int = 3, backoff: float = 1.5, **kwargs
+    ) -> Any:
+        """Kirim request dengan retry otomatis pada 429/5xx (exponential backoff)."""
+        attempt = 0
+        while True:
+            try:
+                if method == "GET":
+                    r = self.session.get(f"{self.base_url}{path}", timeout=30, **kwargs)
+                elif method == "POST":
+                    r = self.session.post(f"{self.base_url}{path}", timeout=30, **kwargs)
+                else:
+                    r = self.session.delete(f"{self.base_url}{path}", timeout=30, **kwargs)
+            except requests.RequestException:
+                if attempt >= max_retries:
+                    raise
+                attempt += 1
+                time.sleep(backoff ** attempt)
+                continue
+            # Retry hanya pada rate limit (429) atau server error (5xx)
+            if r.status_code in (429, 500, 502, 503, 504):
+                if attempt >= max_retries:
+                    return self._handle(r)
+                attempt += 1
+                time.sleep(backoff ** attempt)
+                continue
+            return self._handle(r)
 
     @staticmethod
     def _handle(r: requests.Response) -> Any:
