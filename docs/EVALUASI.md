@@ -1,7 +1,7 @@
 # Evaluasi HeroSMS Telegram Bot
 
 Tanggal evaluasi: 2026-11-01 (UTC)
-Versi: commit `fe79c79`
+Versi: commit `83cc987`
 
 ## 1. Rekapitulasi semua fitur yang sudah selesai
 
@@ -92,8 +92,8 @@ python3 -m tests.test_herosms
 
 - GitHub: https://github.com/valvatacea/herosms-telegram-bot
 - Branch: `master`
-- Commit terbaru: `f993eb9`
+- Commit terbaru: `83cc987`
 
 ## 9. Kesimpulan
 
-Semua 6 gap dari evaluasi sebelumnya telah ditutup. Bot sekarang memiliki pagination, notifikasi OTP otomatis, riwayat transaksi, retry API, dan dukungan multi-instance. Semua kode kompilasi bersih dan semua 7 tes lolos. Bot siap untuk production dengan `.env` yang diisi.
+Semua 7 gap dari evaluasi sebelumnya telah ditutup. Bot sekarang memiliki pagination, notifikasi OTP otomatis, riwayat transaksi, retry API, dan dukungan multi-instance. Semua kode kompilasi bersih dan semua 7 tes lolos. Bot siap untuk production dengan `.env` yang diisi.
