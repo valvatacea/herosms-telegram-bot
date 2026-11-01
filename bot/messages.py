@@ -88,8 +88,23 @@ def balance_msg(data: Dict, price_str: str = "") -> str:
 
 def stats_msg(data: Dict) -> str:
     lines = [header("📊 Statistik Pengguna", "Ringkasan akun HeroSMS")]
-    for key, val in data.items():
-        lines.append(f"• {esc(str(key))}: {code(str(val))}")
+    node = data.get("data", data) if isinstance(data, dict) else {}
+    if isinstance(node, dict) and node:
+        for country, services in node.items():
+            if isinstance(services, dict):
+                for service, st in services.items():
+                    if isinstance(st, dict):
+                        lines.append(
+                            f"• {esc(str(country))}/{esc(str(service))}: "
+                            f"sukses {code(str(st.get('success','-')))} dari {code(str(st.get('count','-')))} "
+                            f"\\({code(str(st.get('percent','-')))}%\\)"
+                        )
+                    else:
+                        lines.append(f"• {esc(str(country))}/{esc(str(service))}: {code(str(st))}")
+            else:
+                lines.append(f"• {esc(str(country))}: {code(str(services))}")
+    else:
+        lines.append("Belum ada statistik aktivasi\\.")
     return "\n".join(lines) + "\n"
 
 
