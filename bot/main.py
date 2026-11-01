@@ -448,7 +448,7 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
         _edit(
             chat,
             msg_id,
-            "🔹 *Layanan \\- {country}*".format(country=country) + "\n\nPilih layanan (populer ditampilkan paling atas):",
+            "🔹 *Layanan \\- {country}*".format(country=country) + "\n\nPilih layanan \\(populer ditampilkan paling atas\\):",
             buy_services_keyboard(items),
         )
         _answer(call, "Pilih layanan")
@@ -642,7 +642,7 @@ def _show_email_domains(chat: int, msg_id: int, call: CallbackQuery) -> None:
         set_state(uid, "_email_pending", "domains")
         set_state(uid, "_email_chat", chat)
         set_state(uid, "_email_msg_id", msg_id)
-        bot.send_message(chat, "Masukkan site (contoh: telegram.com):")
+        bot.send_message(chat, "Masukkan site \\(contoh: telegram\\.com\\):")
         bot.register_next_step_handler(call.message, _handle_email_site_input)
         _answer(call, "Masukkan site dulu")
         return
@@ -674,7 +674,7 @@ def _show_email_offers(chat: int, msg_id: int, call: CallbackQuery) -> None:
         set_state(uid, "_email_pending", "offers")
         set_state(uid, "_email_chat", chat)
         set_state(uid, "_email_msg_id", msg_id)
-        bot.send_message(chat, "Masukkan site (contoh: telegram.com):")
+        bot.send_message(chat, "Masukkan site \\(contoh: telegram\\.com\\):")
         bot.register_next_step_handler(call.message, _handle_email_site_input)
         _answer(call, "Masukkan site dulu")
         return
