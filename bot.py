@@ -1,4 +1,6 @@
-"""Bot Telegram untuk HeroSMS — coverage seluruh OpenAPI spec (api-en.json)."""
+"""Bot Telegram untuk HeroSMS — coverage seluruh OpenAPI spec (api-en.json).
+Versi lebih ramah pengguna: konfirmasi sebelum aksi destructive,
+pesan error ramah, dan navigasi yang konsisten."""
 
 from __future__ import annotations
 
@@ -12,12 +14,25 @@ from telebot.types import Message, CallbackQuery
 
 from config import BOT_TOKEN, HEROSMS_API_KEY, HEROSMS_BASE_URL
 from herosms import HeroSMS, HeroSMSError
-from keyboards import main_menu, back_menu, activation_actions, email_menu
+from keyboards import main_menu, back_menu, activation_actions, confirm_keyboard, email_menu
 from messages import (
-    esc, bold, code, header, balance_msg, stats_msg, countries_msg,
-    services_msg, prices_msg, activation_detail, active_list_msg,
-    history_msg, otp_msg, purchase_success, welcome_msg, email_list_msg,
+    esc,
+    balance_msg,
+    stats_msg,
+    countries_msg,
+    services_msg,
+    prices_msg,
+    activation_detail,
+    active_list_msg,
+    history_msg,
+    otp_msg,
+    purchase_success,
+    welcome_msg,
+    email_list_msg,
     email_detail_msg,
+    confirm_msg,
+    error_msg,
+    success_msg,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -67,6 +82,13 @@ def _answer(call: CallbackQuery, text: str, alert: bool = False) -> None:
     bot.answer_callback_query(call.id, text, show_alert=alert)
 
 
+def _edit(chat: int, msg_id: int, text: str, markup=None) -> None:
+    try:
+        bot.edit_message_text(text, chat, msg_id, reply_markup=markup)
+    except Exception:
+        bot.send_message(chat, text, reply_markup=markup)
+
+
 # ── Command ─────────────────────────────────────────────────────
 
 @bot.message_handler(commands=["start"])
@@ -82,16 +104,19 @@ def cmd_menu(message: Message) -> None:
 @bot.message_handler(commands=["help"])
 def cmd_help(message: Message) -> None:
     text = (
-        header("Bantuan", "Perintah yang tersedia")
-        + "/start — menu utama\n"
-        + "/menu — buka menu utama\n"
-        + "/help — panduan ini\n"
-        + "\nFitur:\n"
-        + "• 💰 Saldo & statistik akun\n"
-        + "• 🌍 Negara, layanan, harga\n"
-        + "• 🛒 Beli nomor verifikasi (SMS/email)\n"
-        + "• 📨 OTP terakhir / daftar OTP\n"
-        + "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi · ⏳ Perpanjang\n"
+        "🔹 *Bantuan*\n"
+        "Perintah yang tersedia:\n"
+        "\n"
+        "/start — menu utama\n"
+        "/menu — buka menu utama\n"
+        "/help — panduan ini\n"
+        "\n"
+        "Fitur:\n"
+        "• 💰 Saldo & statistik akun\n"
+        "• 🌍 Negara, layanan, harga\n"
+        "• 🛒 Beli nomor verifikasi (SMS/email)\n"
+        "• 📨 OTP terakhir / daftar OTP\n"
+        "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi · ⏳ Perpanjang\n"
     )
     bot.reply_to(message, text, reply_markup=main_menu())
 
@@ -162,21 +187,31 @@ def on_callback(call: CallbackQuery) -> None:
             aid = data.split(":", 2)[2]
             _show_activation_detail(chat, msg_id, aid, call)
 
-        elif data.startswith("act:finish:"):
-            aid = data.split(":", 2)[2]
-            _do_act(chat, msg_id, "finish", aid, call)
+        # Konfirmasi sebelum aksi destructive
+        elif data.startswith("act:confirm:finish:"):
+            aid = data.split(":", 3)[3]
+            _show_confirm_finish(chat, msg_id, aid, call)
 
-        elif data.startswith("act:cancel:"):
+        elif data.startswith("act:confirm:cancel:"):
+            aid = data.split(":", 3)[3]
+            _show_confirm_cancel(chat, msg_id, aid, call)
+
+        # Eksekusi setelah konfirmasi
+        elif data.startswith("confirm:finish:"):
             aid = data.split(":", 2)[2]
-            _do_act(chat, msg_id, "cancel", aid, call)
+            _do_finish(chat, msg_id, aid, call)
+
+        elif data.startswith("confirm:cancel:"):
+            aid = data.split(":", 2)[2]
+            _do_cancel(chat, msg_id, aid, call)
 
         elif data.startswith("act:reactivate:"):
             aid = data.split(":", 2)[2]
-            _do_act(chat, msg_id, "reactivate", aid, call)
+            _do_reactivate(chat, msg_id, aid, call)
 
         elif data.startswith("act:prolong:"):
             aid = data.split(":", 2)[2]
-            _do_act(chat, msg_id, "prolong", aid, call)
+            _do_prolong(chat, msg_id, aid, call)
 
         elif data.startswith("email:domains"):
             _show_email_domains(chat, msg_id, call)
@@ -212,20 +247,15 @@ def on_callback(call: CallbackQuery) -> None:
             _answer(call, "Tombol tidak dikenal.", alert=True)
 
     except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Permintaan Gagal", str(exc)), back_menu())
         _answer(call, f"Error: {exc}", alert=True)
     except Exception as exc:  # noqa: BLE001
         log.exception("callback error")
-        _answer(call, f"Error tak terduga: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Error Tak Terduga", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 # ── Helper tampilan ─────────────────────────────────────────────
-
-def _edit(chat: int, msg_id: int, text: str, markup=None) -> None:
-    try:
-        bot.edit_message_text(text, chat, msg_id, reply_markup=markup)
-    except Exception:
-        bot.send_message(chat, text, reply_markup=markup)
-
 
 def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
     try:
@@ -233,8 +263,8 @@ def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, balance_msg(data), back_menu())
         _answer(call, "Saldo dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Cek Saldo')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -243,8 +273,8 @@ def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, stats_msg(data), back_menu())
         _answer(call, "Statistik dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Cek Statistik')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Cek Statistik", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_countries(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -253,8 +283,8 @@ def _show_countries(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, countries_msg(data), back_menu())
         _answer(call, "Negara dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Negara')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_services(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -263,8 +293,8 @@ def _show_services(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, services_msg(data), back_menu())
         _answer(call, "Layanan dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Layanan')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_prices(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -273,8 +303,8 @@ def _show_prices(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, prices_msg(data), back_menu())
         _answer(call, "Harga dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Harga')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Harga", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
@@ -291,11 +321,11 @@ def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> No
                     f"🌍 {name}", callback_data=f"buy:country:{cid}"))
         kb.add(*buttons)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
-        _edit(chat, msg_id, header("Beli Nomor", "Pilih negara"), kb)
+        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", kb)
         _answer(call, "Pilih negara")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Negara')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call: CallbackQuery) -> None:
@@ -312,11 +342,11 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
                     f"📱 {name}", callback_data=f"buy:service:{sid}"))
         kb.add(*buttons)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
-        _edit(chat, msg_id, header(f"Layanan - {country}", "Pilih layanan"), kb)
+        _edit(chat, msg_id, f"🔹 *Layanan - {country}*\n\nPilih layanan:", kb)
         _answer(call, "Pilih layanan")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Layanan')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _do_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
@@ -327,12 +357,78 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQ
         _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", ""))))
         _answer(call, "Nomor dibeli")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Beli Nomor')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
+
+# ── Konfirmasi aksi destructive ─────────────────────────────────
+
+def _show_confirm_finish(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    _edit(
+        chat,
+        msg_id,
+        confirm_msg("Selesaikan Aktivasi", f"Aktivasi ID {aid} akan ditandai selesai."),
+        confirm_keyboard("finish", aid),
+    )
+    _answer(call, "Konfirmasi selesai")
+
+
+def _show_confirm_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    _edit(
+        chat,
+        msg_id,
+        confirm_msg("Batalkan Aktivasi", f"Aktivasi ID {aid} akan dibatalkan dan saldo dikembalikan."),
+        confirm_keyboard("cancel", aid),
+    )
+    _answer(call, "Konfirmasi batalkan")
+
+
+# ── Eksekusi aksi ───────────────────────────────────────────────
+
+def _do_finish(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    try:
+        api.finish_activation(aid)
+        _edit(chat, msg_id, success_msg("Aktivasi Selesai", f"Aktivasi ID {aid} telah diselesaikan."), back_menu())
+        _answer(call, "Selesai")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Selesaikan", str(exc)), activation_actions(aid))
+        _answer(call, str(exc), alert=True)
+
+
+def _do_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    try:
+        api.cancel_activation(aid)
+        _edit(chat, msg_id, success_msg("Aktivasi Dibatalkan", f"Aktivasi ID {aid} telah dibatalkan."), back_menu())
+        _answer(call, "Dibatalkan")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid))
+        _answer(call, str(exc), alert=True)
+
+
+def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    try:
+        api.reactivate_activation(aid)
+        _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid))
+        _answer(call, "Di-reaktivasi")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid))
+        _answer(call, str(exc), alert=True)
+
+
+def _do_prolong(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    try:
+        api.prolong_activation(aid)
+        _edit(chat, msg_id, success_msg("Aktivasi Diperpanjang", f"Aktivasi ID {aid} telah diperpanjang."), activation_actions(aid))
+        _answer(call, "Diperpanjang")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Perpanjang", str(exc)), activation_actions(aid))
+        _answer(call, str(exc), alert=True)
+
+
+# ── Email ───────────────────────────────────────────────────────
 
 def _show_email_menu(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    _edit(chat, msg_id, header("Aktivasi Email", "Manajemen aktivasi via email"), email_menu())
+    _edit(chat, msg_id, "🔹 *Aktivasi Email*\n\nManajemen aktivasi via email:", email_menu())
     _answer(call, "Menu email")
 
 
@@ -350,11 +446,11 @@ def _show_email_domains(chat: int, msg_id: int, call: CallbackQuery) -> None:
                     f"📧 {name}", callback_data=f"email:buy:{did}"))
         kb.add(*buttons)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:email"))
-        _edit(chat, msg_id, header("Domain Email", "Pilih domain"), kb)
+        _edit(chat, msg_id, "🔹 *Domain Email*\n\nPilih domain:", kb)
         _answer(call, "Domain dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Domain')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Domain", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_email_offers(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -363,8 +459,8 @@ def _show_email_offers(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, prices_msg(data), back_menu())
         _answer(call, "Offers dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Offers')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Offers", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_email_list(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -383,8 +479,8 @@ def _show_email_list(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, email_list_msg(data), kb)
         _answer(call, "Daftar email dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Email')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Email", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_email_services_for_buy(chat: int, msg_id: int, uid: int, domain: str, call: CallbackQuery) -> None:
@@ -401,11 +497,11 @@ def _show_email_services_for_buy(chat: int, msg_id: int, uid: int, domain: str, 
                     f"📱 {name}", callback_data=f"email:service:{sid}"))
         kb.add(*buttons)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Domain", callback_data="email:domains"))
-        _edit(chat, msg_id, header(f"Layanan Email - {domain}", "Pilih layanan"), kb)
+        _edit(chat, msg_id, f"🔹 *Layanan Email - {domain}*\n\nPilih layanan:", kb)
         _answer(call, "Pilih layanan")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Layanan')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _do_email_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
@@ -416,8 +512,8 @@ def _do_email_purchase(chat: int, msg_id: int, uid: int, service: str, call: Cal
         _edit(chat, msg_id, purchase_success(act), email_menu())
         _answer(call, "Aktivasi email dibeli")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Beli Email')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Beli Email", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_email_detail(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> None:
@@ -426,29 +522,31 @@ def _show_email_detail(chat: int, msg_id: int, eid: str, call: CallbackQuery) ->
         _edit(chat, msg_id, email_detail_msg(data), email_menu())
         _answer(call, "Detail email")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Detail')}\n{esc(str(exc))}", email_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), email_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _do_email_cancel(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> None:
     try:
         api.cancel_email(eid)
-        _edit(chat, msg_id, f"{header('❌ Dibatalkan', f'Aktivasi email {eid} dibatalkan.')}", back_menu())
+        _edit(chat, msg_id, success_msg("Email Dibatalkan", f"Aktivasi email ID {eid} telah dibatalkan."), back_menu())
         _answer(call, "Dibatalkan")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Batalkan')}\n{esc(str(exc))}", email_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), email_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _do_email_reorder(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> None:
     try:
         api.reorder_email(eid)
-        _edit(chat, msg_id, f"{header('🔄 Pesan Ulang', f'Aktivasi email {eid} dipesan ulang.')}", email_menu())
+        _edit(chat, msg_id, success_msg("Email Dipesan Ulang", f"Aktivasi email ID {eid} telah dipesan ulang."), email_menu())
         _answer(call, "Dipesan ulang")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Pesan Ulang')}\n{esc(str(exc))}", email_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Pesan Ulang", str(exc)), email_menu())
+        _answer(call, str(exc), alert=True)
 
+
+# ── Aktivasi SMS ────────────────────────────────────────────────
 
 def _show_active(chat: int, msg_id: int, call: CallbackQuery) -> None:
     try:
@@ -466,8 +564,8 @@ def _show_active(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, active_list_msg(data), kb)
         _answer(call, "Aktivasi aktif dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Aktif')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Aktif", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_history(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -476,8 +574,8 @@ def _show_history(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _edit(chat, msg_id, history_msg(data), back_menu())
         _answer(call, "Riwayat dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Riwayat')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Riwayat", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
@@ -491,14 +589,14 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
             hitems = hist.get("data", []) if isinstance(hist, dict) else []
             act = next((x for x in hitems if isinstance(x, dict) and str(x.get("id")) == aid), None)
         if act is None:
-            _edit(chat, msg_id, f"{header('Tidak Ditemukan')}\nAktivasi ID {aid} tidak ditemukan.", back_menu())
+            _edit(chat, msg_id, error_msg("Tidak Ditemukan", f"Aktivasi ID {aid} tidak ditemukan."), back_menu())
             _answer(call, "Tidak ditemukan", alert=True)
             return
         _edit(chat, msg_id, activation_detail(act), activation_actions(aid))
         _answer(call, "Detail aktivasi")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Muat Detail')}\n{esc(str(exc))}", back_menu())
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())
+        _answer(call, str(exc), alert=True)
 
 
 def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
@@ -507,8 +605,8 @@ def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid))
         _answer(call, "OTP dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Ambil OTP')}\n{esc(str(exc))}", activation_actions(aid))
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Ambil OTP", str(exc)), activation_actions(aid))
+        _answer(call, str(exc), alert=True)
 
 
 def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
@@ -517,31 +615,8 @@ def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid))
         _answer(call, "Daftar OTP dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header('Gagal Ambil Daftar OTP')}\n{esc(str(exc))}", activation_actions(aid))
-        _answer(call, f"Error: {exc}", alert=True)
-
-
-def _do_act(chat: int, msg_id: int, action: str, aid: str, call: CallbackQuery) -> None:
-    try:
-        if action == "finish":
-            api.finish_activation(aid)
-            _edit(chat, msg_id, f"{header('✅ Selesai', f'Aktivasi {aid} selesai.')}", back_menu())
-            _answer(call, "Selesai")
-        elif action == "cancel":
-            api.cancel_activation(aid)
-            _edit(chat, msg_id, f"{header('❌ Dibatalkan', f'Aktivasi {aid} dibatalkan.')}", back_menu())
-            _answer(call, "Dibatalkan")
-        elif action == "reactivate":
-            api.reactivate_activation(aid)
-            _edit(chat, msg_id, f"{header('🔄 Reaktivasi', f'Aktivasi {aid} di-reaktivasi.')}", activation_actions(aid))
-            _answer(call, "Di-reaktivasi")
-        elif action == "prolong":
-            api.prolong_activation(aid)
-            _edit(chat, msg_id, f"{header('⏳ Diperpanjang', f'Aktivasi {aid} diperpanjang.')}", activation_actions(aid))
-            _answer(call, "Diperpanjang")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, f"{header(f'Gagal {action}')}\n{esc(str(exc))}", activation_actions(aid))
-        _answer(call, f"Error: {exc}", alert=True)
+        _edit(chat, msg_id, error_msg("Gagal Ambil Daftar OTP", str(exc)), activation_actions(aid))
+        _answer(call, str(exc), alert=True)
 
 
 # ── Run ─────────────────────────────────────────────────────────
