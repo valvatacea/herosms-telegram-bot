@@ -175,11 +175,11 @@ def activation_detail(act: Dict) -> str:
         f"{header('📋 Detail Aktivasi', f'ID: {code(str(act.get("id","-")))}')}",
         f"{bold('Status:')} {esc(str(act.get('status','-')))}",
         f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
-        f"{bold('Kode negara:')} {code(str(act.get('phoneCode','-')))}",
+        f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
         f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
         f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
         f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
-        f"{bold('Dibuat:')} {code(str(act.get('createDate','-')))}",
+        f"{bold('Dibuat:')} {code(str(act.get('createDate', act.get('createdAt','-'))))}",
     ]
     more = act.get("moreCodes")
     if more:
