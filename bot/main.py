@@ -800,12 +800,13 @@ def _show_confirm_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) 
 # ── Eksekusi aksi ───────────────────────────────────────────────
 
 def _do_finish(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    w = _is_watching(call.from_user.id, aid)
     try:
         api.finish_activation(aid)
         _edit(chat, msg_id, success_msg("Aktivasi Selesai", f"Aktivasi ID {aid} telah diselesaikan."), back_menu())
         _answer(call, "Selesai")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Selesaikan", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
+        _edit(chat, msg_id, error_msg("Gagal Selesaikan", str(exc)), activation_actions(aid, watching=w))
         _answer(call, _alert("Error", exc), alert=True)
 
 
