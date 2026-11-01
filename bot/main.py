@@ -294,9 +294,6 @@ def on_callback(call: CallbackQuery) -> None:
         elif data == "menu:history":
             _show_history(chat, msg_id, call, page=1)
 
-        elif data == "menu:transactions":
-            _show_transactions(chat, msg_id, call)
-
         elif data == "settings:main":
             _show_settings(chat, msg_id, uid, call)
 
@@ -986,50 +983,6 @@ def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) ->
         _answer(call, _alert("Error", exc), alert=True)
 
 
-def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    uid = call.from_user.id
-    purchases = get_state(uid, "purchases", []) or []
-    if not purchases:
-        txt = "💰 *Riwayat Transaksi*\n\nBelum ada pembelian\\."
-        _edit(chat, msg_id, txt, back_menu())
-        _answer(call, "Belum ada transaksi")
-        return
-
-    total = 0.0
-    lines = ["💰 *Riwayat Transaksi*\n"]
-    price_cache: dict[tuple[str, str], tuple[str, str]] = {}
-    for p in reversed(purchases[-20:]):
-        try:
-            total += float(str(p.get("price", "0")).replace(",", "."))
-        except (ValueError, TypeError):
-            pass
-        country = p.get("country", "-")
-        service = p.get("service", "-")
-        hist_price = p.get("price", "-")
-        hist_cur = p.get("currency", "")
-        cur_price, cur_cur = hist_price, hist_cur
-        if country != "-" and service != "-":
-            key = (country, service)
-            if key not in price_cache:
-                try:
-                    cur_price, cur_cur = api.lookup_price(country, service)
-                except Exception:  # noqa: BLE001
-                    cur_price, cur_cur = hist_price, hist_cur
-                price_cache[key] = (cur_price, cur_cur)
-            else:
-                cur_price, cur_cur = price_cache[key]
-        line = (
-            f"• {esc(str(p.get('time', '-')))} \\| {esc(str(service))}"
-            f" \\| {esc(str(country))} \\| {code(str(hist_price))} {code(str(hist_cur))}"
-        )
-        if cur_price != hist_price:
-            line += f" \\(sekarang: {code(str(cur_price))} {code(str(cur_cur))}\\)"
-        lines.append(line)
-    lines.append(f"\n*Total:* {esc(f'{total:g}')}")
-    kb = InlineKeyboardMarkup(row_width=1)
-    kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
-    _edit(chat, msg_id, "\n".join(lines), kb)
-    _answer(call, "Riwayat transaksi")
 def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
     try:
         data = api.otp_last(aid)
