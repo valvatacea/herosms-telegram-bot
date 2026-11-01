@@ -732,7 +732,8 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
     try:
         act: Dict = {}
         try:
-            data = api.active_activations(search=str(aid), size=25)
+            # search=ID tidak match di API — ambil daftar lalu cocokkan manual
+            data = api.active_activations(size=25)
             items = data.get("data", []) if isinstance(data, dict) else []
             if isinstance(items, list):
                 act = next((x for x in items if str(x.get("id", "")) == str(aid)), {})
@@ -744,11 +745,11 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
                 data = api.activation_history(
                     from_=(now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     to=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    search=str(aid),
+                    size=25,
                 )
                 items = data.get("data", []) if isinstance(data, dict) else []
                 if isinstance(items, list) and items:
-                    act = next((x for x in items if str(x.get("id", "")) == str(aid)), items[0])
+                    act = next((x for x in items if str(x.get("id", "")) == str(aid)), {})
             except HeroSMSError:
                 pass
         if not act:
