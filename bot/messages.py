@@ -115,6 +115,17 @@ def stats_msg(data: Dict, lang: str = "id") -> str:
 
 
 
+_STATUS_KEYS = {
+    1: "st_siap",
+    2: "st_kode",
+    3: "st_resend",
+    4: "st_menunggu",
+    6: "st_selesai",
+    8: "st_batal",
+    10: "st_refund",
+}
+
+
 def status_name(s, lang: str = "id") -> str:
     """Kode status angka -> teks mudah dibaca."""
     if s in (None, "", "-"):
