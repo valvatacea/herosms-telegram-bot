@@ -167,7 +167,7 @@ def cmd_help(message: Message) -> None:
         "Fitur:\n"
         "• 💰 Saldo & statistik akun\n"
         "• 🌍 Negara, layanan, harga\n"
-        "• 🛒 Beli nomor verifikasi (SMS/email)\n"
+        "• 🛒 Beli nomor verifikasi \\(SMS/email\\)\n"
         "• 📨 OTP terakhir / daftar OTP\n"
         "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi · ⏳ Perpanjang\n"
     )

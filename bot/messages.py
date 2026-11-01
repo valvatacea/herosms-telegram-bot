@@ -1,4 +1,4 @@
-"""Format pesan agar rapi, ramah pengguna, dan mudah dibaca\\."""
+"""Format pesan agar rapi, ramah pengguna, dan mudah dibaca."""
 
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def otp_msg(activation_id: str, data: Any) -> str:
             if isinstance(item, dict):
                 code_val = item.get("code", item.get("otp", "-"))
                 date = item.get("date", item.get("createDate", "-"))
-                lines.append(f"{i}. `{code(str(code_val))}` ({code(str(date))})")
+                lines.append(f"{i}. `{code(str(code_val))}` \\({code(str(date))}\\)")
             else:
                 lines.append(f"{i}. {code(str(item))}")
     else:
@@ -192,11 +192,11 @@ def welcome_msg() -> str:
     return (
         f"{header('🤖 HeroSMS Bot', 'Manajemen aktivasi SMS/OTP via Telegram')}\n"
         "Selamat datang\\! Bot ini membantu Anda:\n"
-        "• Cek saldo & statistik akun\n"
-        "• Lihat negara, layanan, dan harga\n"
-        "• Beli nomor verifikasi (SMS & email)\n"
-        "• Terima OTP langsung di chat\n"
-        "• Selesaikan, batalkan, atau perpanjang aktivasi\n"
+        f"• {esc('Cek saldo & statistik akun')}\n"
+        f"• {esc('Lihat negara, layanan, dan harga')}\n"
+        f"• {esc('Beli nomor verifikasi (SMS & email)')}\n"
+        f"• {esc('Terima OTP langsung di chat')}\n"
+        f"• {esc('Selesaikan, batalkan, atau perpanjang aktivasi')}\n"
         "\nPilih menu di bawah untuk memulai 👇\n"
     )
 
