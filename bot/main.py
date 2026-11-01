@@ -28,6 +28,7 @@ from bot.keyboards import (
     settings_lang_menu,
     buy_search_results_keyboard,
 )
+from bot.lang import t
 from bot.messages import (
     esc,
     code,
@@ -157,6 +158,10 @@ def _legacy_items(data):
     return data if isinstance(data, list) else []
 
 
+def _lang(uid: int) -> str:
+    return str(get_state(uid, "settings_lang") or "id")
+
+
 # ── Kurs USD→IDR (cache 24 jam) & format harga ─────────────────────
 
 _FX = {"rate": None, "ts": 0.0}
@@ -178,7 +183,7 @@ def _fmt_price(usd, uid) -> str:
     usd = str(usd)
     if usd in ("-", ""):
         return code(usd)
-    if (get_state(uid, "settings_currency") or "usd") != "idr":
+    if (get_state(uid, "settings_currency") or "idr") != "idr":
         return code("$" + usd)
     rate = _idr_rate()
     if not rate:
@@ -195,7 +200,7 @@ def _price_disp(usd, uid) -> str:
     usd = str(usd)
     if usd in ("-", ""):
         return code("-")
-    if (get_state(uid, "settings_currency") or "usd") == "idr":
+    if (get_state(uid, "settings_currency") or "idr") == "idr":
         return f"🇮🇩 {_fmt_price(usd, uid)}"
     return f"💵 {code('$' + usd)}"
 
@@ -203,7 +208,7 @@ def _price_disp(usd, uid) -> str:
 def _idr_label(usd, uid) -> str:
     """Label tombol harga: '🇮🇩 Rp...' saat mode IDR, '💵 $USD' saat USD."""
     usd = str(usd)
-    if (get_state(uid, "settings_currency") or "usd") != "idr":
+    if (get_state(uid, "settings_currency") or "idr") != "idr":
         return f"💵 ${usd}"
     rate = _idr_rate()
     if not rate:
@@ -252,34 +257,55 @@ def _service_name(code) -> str:
 @bot.message_handler(commands=["start"])
 def cmd_start(message: Message) -> None:
     log.debug(f"command /start uid={message.chat.id}")
-    bot.reply_to(message, welcome_msg(), reply_markup=main_menu())
+    uid = message.from_user.id
+    lg = _lang(uid)
+    bot.reply_to(message, welcome_msg(lg), reply_markup=main_menu(lg))
 
 
 @bot.message_handler(commands=["menu"])
 def cmd_menu(message: Message) -> None:
     log.debug(f"command /menu uid={message.chat.id}")
-    bot.send_message(message.chat.id, "Menu utama", reply_markup=main_menu())
+    lg = _lang(message.from_user.id)
+    bot.send_message(message.chat.id, t(lg, "menu_utama_ans"), reply_markup=main_menu(lg))
 
 
 @bot.message_handler(commands=["help"])
 def cmd_help(message: Message) -> None:
     log.debug(f"command /help uid={message.chat.id}")
-    text = (
-        "🔹 *Bantuan*\n"
-        "Perintah yang tersedia:\n"
-        "\n"
-        "/start — menu utama\n"
-        "/menu — buka menu utama\n"
-        "/help — panduan ini\n"
-        "\n"
-        "Fitur:\n"
-        "• 💰 Saldo & statistik akun\n"
-        "• 🌍 Negara, layanan, harga\n"
-        "• 🛒 Beli nomor verifikasi SMS/OTP\n"
-        "• 📨 OTP terakhir / daftar OTP\n"
-        "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi · ⏳ Perpanjang\n"
-    )
-    bot.reply_to(message, text, reply_markup=main_menu())
+    lg = _lang(message.from_user.id)
+    if lg == "en":
+        text = (
+            "🔹 *Help*\n"
+            "Available commands:\n"
+            "\n"
+            "/start — main menu\n"
+            "/menu — open the main menu\n"
+            "/help — this guide\n"
+            "\n"
+            "Features:\n"
+            "• 💰 Balance & account stats\n"
+            "• 🌍 Countries, services, prices\n"
+            "• 🛒 Buy SMS/OTP verification numbers\n"
+            "• 📨 Latest OTP / all OTP\n"
+            "• ✅ Finish · ❌ Cancel · 🔄 Reactivate\n"
+        )
+    else:
+        text = (
+            "🔹 *Bantuan*\n"
+            "Perintah yang tersedia:\n"
+            "\n"
+            "/start — menu utama\n"
+            "/menu — buka menu utama\n"
+            "/help — panduan ini\n"
+            "\n"
+            "Fitur:\n"
+            "• 💰 Saldo & statistik akun\n"
+            "• 🌍 Negara, layanan, harga\n"
+            "• 🛒 Beli nomor verifikasi SMS/OTP\n"
+            "• 📨 OTP terakhir / daftar OTP\n"
+            "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi\n"
+        )
+    bot.reply_to(message, text, reply_markup=main_menu(lg))
 
 
 # ── Callback router ─────────────────────────────────────────────
@@ -290,16 +316,17 @@ def on_callback(call: CallbackQuery) -> None:
     uid = call.from_user.id
     chat = call.message.chat.id
     msg_id = call.message.message_id
+    lang = _lang(uid)
     log.debug(f"callback uid={uid} chat={chat} data={data}")
 
     try:
         if data == "menu:main":
-            _edit(chat, msg_id, welcome_msg(), main_menu())
-            _answer(call, "Menu utama")
+            _edit(chat, msg_id, welcome_msg(lang), main_menu(lang))
+            _answer(call, t(lang, "menu_utama_ans"))
 
         elif data == "menu:close":
-            bot.edit_message_text("Menu ditutup\\. Ketik /start untuk buka kembali\\.", chat, msg_id)
-            _answer(call, "Ditutup")
+            bot.edit_message_text(esc(t(lang, "menu_dibuka")), chat, msg_id)
+            _answer(call, t(lang, "menu_ditutup_ans"))
 
         elif data == "menu:balance":
             _show_balance(chat, msg_id, call)
@@ -329,22 +356,23 @@ def on_callback(call: CallbackQuery) -> None:
             _show_settings(chat, msg_id, uid, call)
 
         elif data == "settings:lang":
-            lang = get_state(uid, "settings_lang") or "id"
-            _edit(chat, msg_id, "🔹 *Pilih Bahasa*", settings_lang_menu(lang))
-            _answer(call, "Pilih bahasa")
+            _edit(chat, msg_id, "🔹 *{}*".format(esc(t(lang, "pilih_bahasa_judul"))), settings_lang_menu(lang, lang))
+            _answer(call, t(lang, "pilih_bahasa_ans"))
 
         elif data == "settings:lang:id":
             set_state(uid, "settings_lang", "id")
             _show_settings(chat, msg_id, uid, call)
-            _answer(call, "Bahasa: Indonesia")
+            _answer(call, t("id", "bahasa_disimpan", b=t("id", "bahasa_indo")))
 
-        elif data == "settings:lang:soon":
-            _answer(call, "English segera tersedia", alert=True)
+        elif data == "settings:lang:en":
+            set_state(uid, "settings_lang", "en")
+            _show_settings(chat, msg_id, uid, call)
+            _answer(call, t("en", "bahasa_disimpan", b=t("en", "bahasa_inggris")))
 
         elif data.startswith("settings:cur:"):
             set_state(uid, "settings_currency", data.split(":")[2])
             _show_settings(chat, msg_id, uid, call)
-            _answer(call, "Mata uang disimpan")
+            _answer(call, t(lang, "mata_uang_disimpan"))
 
         elif data == "settings:autocancel":
             cur = str(get_state(uid, "settings_autocancel") or "off")
@@ -352,7 +380,7 @@ def on_callback(call: CallbackQuery) -> None:
             nxt = order[(order.index(cur) + 1) % len(order)] if cur in order else "5"
             set_state(uid, "settings_autocancel", nxt)
             _show_settings(chat, msg_id, uid, call)
-            _answer(call, "Nonaktif" if nxt == "off" else f"Auto-batal: {nxt} menit")
+            _answer(call, t(lang, "autobatal_ans_off") if nxt == "off" else t(lang, "autobatal_ans", v="{} {}".format(nxt, "menit" if lang == "id" else "minutes")))
 
         elif data.startswith("buy:countries:"):
             _show_countries_page(chat, msg_id, uid, int(data.split(":")[2]), call)
@@ -362,15 +390,15 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data == "buy:search:country":
             set_state(uid, "_buy_search", "country")
-            bot.send_message(chat, "🔍 Ketik nama negara yang dicari:")
+            bot.send_message(chat, t(lang, "ketik_negara"))
             bot.register_next_step_handler(call.message, _handle_buy_search)
-            _answer(call, "Mode pencarian negara")
+            _answer(call, t(lang, "carian_mode_negara"))
 
         elif data == "buy:search:service":
             set_state(uid, "_buy_search", "service")
-            bot.send_message(chat, "🔍 Ketik nama layanan yang dicari:")
+            bot.send_message(chat, t(lang, "ketik_layanan"))
             bot.register_next_step_handler(call.message, _handle_buy_search)
-            _answer(call, "Mode pencarian layanan")
+            _answer(call, t(lang, "carian_mode_layanan"))
 
         elif data.startswith("buy:country:"):
             parts = data.split(":", 3)
@@ -459,47 +487,49 @@ def on_callback(call: CallbackQuery) -> None:
             _do_reactivate(chat, msg_id, aid, call)
 
         else:
-            _answer(call, "Tombol tidak dikenal.", alert=True)
+            _answer(call, t(lang, "tombol_tak_dikenal"), alert=True)
 
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Permintaan Gagal", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lang, "permintaan_gagal"), str(exc)), back_menu(lang))
+        _answer(call, _alert(t(lang, "error_ans"), exc), alert=True)
     except Exception as exc:  # noqa: BLE001
         log.exception("callback error")
-        _edit(chat, msg_id, error_msg("Error Tak Terduga", str(exc)), back_menu())
-        _answer(call, _alert("Error tak terduga", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lang, "error_tak_terduga"), str(exc)), back_menu(lang))
+        _answer(call, _alert(t(lang, "error_tak_terduga_ans"), exc), alert=True)
 
 
 def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    uid = call.from_user.id
+    lg = _lang(uid)
     try:
-        uid = call.from_user.id
         data = api.get_balance()
         bal = str(data.get("balance", "-"))
-        _edit(chat, msg_id, balance_msg(data, _price_disp(bal, uid)), back_menu())
-        _answer(call, "Saldo dimuat")
+        _edit(chat, msg_id, balance_msg(data, _price_disp(bal, uid), lang=lg), back_menu(lg))
+        _answer(call, t(lg, "saldo_dimuat"))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_cek_saldo"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_settings(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
-    lang = get_state(uid, "settings_lang") or "id"
-    cur = get_state(uid, "settings_currency") or "usd"
+    lang = str(get_state(uid, "settings_lang") or "id")
+    cur = get_state(uid, "settings_currency") or "idr"
     ac = str(get_state(uid, "settings_autocancel") or "off")
-    lang_name = "Indonesia" if lang == "id" else "English"
-    ac_name = "Nonaktif" if ac == "off" else f"{ac} menit"
+    lang_name = t(lang, "bahasa_indo") if lang == "id" else t(lang, "bahasa_inggris")
+    ac_name = t(lang, "autobatal_nonaktif") if ac == "off" else t(lang, "autobalan_menit", m=ac)
     text = (
-        "🔹 *Pengaturan*\n\n"
-        f"Bahasa: {esc(lang_name)}\n"
-        f"Mata uang tampilan: {code(cur.upper())}\n"
-        f"Auto\\-batal tanpa OTP: {esc(ac_name)}\n"
-        "Harga HeroSMS selalu USD, mode IDR menampilkan konversi kurs"
+        "🔹 *{}*\n\n".format(esc(t(lang, "pengaturan_judul")))
+        + "{}: {}\n".format(esc(t(lang, "pengaturan_lang")), esc(lang_name))
+        + "{}: {}\n".format(esc(t(lang, "pengaturan_cur")), code(cur.upper()))
+        + "{}: {}\n".format(esc(t(lang, "pengaturan_autocancel")), esc(ac_name))
+        + esc(t(lang, "pengaturan_catatan"))
     )
     _edit(chat, msg_id, text, settings_menu(lang, cur, ac))
-    _answer(call, "Pengaturan")
+    _answer(call, t(lang, "pengaturan_ans"))
 
 
 def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     try:
         data = api.user_stats()
         # Kunci respons = kode (6/go) -> ubah ke nama (Indonesia/Telegram)
@@ -511,11 +541,11 @@ def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
                 for c, sv in data["data"].items()
                 if isinstance(sv, dict)
             }}
-        _edit(chat, msg_id, stats_msg(data), back_menu())
-        _answer(call, "Statistik dimuat")
+        _edit(chat, msg_id, stats_msg(data, lang=lg), back_menu(lg))
+        _answer(call, t(lg, "statistik_dimuat"))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Cek Statistik", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_cek_statistik"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_countries(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -553,16 +583,21 @@ def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> No
 
 
 def _show_countries_page(chat: int, msg_id: int, uid: int, page: int, call: CallbackQuery) -> None:
+    lg = _lang(uid)
     try:
         data = api.legacy("getCountries")
         items = _legacy_items(data)
         total = max(1, (len(items) + 14) // 15)
         page = min(max(1, page), total)
-        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", buy_countries_keyboard(items, page))
-        _answer(call, f"Halaman {page}/{total}")
+        _edit(
+            chat, msg_id,
+            "🔹 *{}*\n\n{}".format(esc(t(lg, "beli_judul")), esc(t(lg, "pilih_negara"))),
+            buy_countries_keyboard(items, page, lang=lg),
+        )
+        _answer(call, t(lg, "halaman", p=page, t=total))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_muat_negara"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call: CallbackQuery) -> None:
@@ -570,6 +605,7 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
 
 
 def _show_services_page(chat: int, msg_id: int, uid: int, page: int, call: CallbackQuery) -> None:
+    lg = _lang(uid)
     country = get_state(uid, "buy_country") or "-"
     try:
         data = api.legacy("getServicesList")
@@ -580,13 +616,13 @@ def _show_services_page(chat: int, msg_id: int, uid: int, page: int, call: Callb
         _edit(
             chat,
             msg_id,
-            "🔹 *Layanan \\- {country}*".format(country=cname) + "\n\nPilih layanan:",
-            buy_services_keyboard(items, page),
+            "🔹 *{}*\n\n{}".format(esc(t(lg, "layanan_negara", c=cname)), esc(t(lg, "pilih_layanan"))),
+            buy_services_keyboard(items, page, lang=lg),
         )
-        _answer(call, f"Halaman {page}/{total}")
+        _answer(call, t(lg, "halaman", p=page, t=total))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_muat_layanan"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _handle_buy_search(message: Message) -> None:
@@ -599,6 +635,7 @@ def _handle_buy_search(message: Message) -> None:
         return
     kind = get_state(uid, "_buy_search") or "country"
     set_state(uid, "_buy_search", None)
+    lg = _lang(uid)
     if kind == "country":
         data = api.legacy("getCountries")
         items = [
@@ -606,9 +643,9 @@ def _handle_buy_search(message: Message) -> None:
             if isinstance(i, dict) and q in str(i.get("eng", i.get("name", ""))).lower()
         ]
         if not items:
-            bot.send_message(message.chat.id, f"🔍 Tidak ada negara yang cocok untuk {code(q)}, coba kata lain")
+            bot.send_message(message.chat.id, esc(t(lg, "tak_cocok_negara", q=q)), parse_mode="MarkdownV2")
             return
-        bot.send_message(message.chat.id, f"🔍 {code(str(len(items)))} negara cocok untuk {code(q)}:", reply_markup=buy_search_results_keyboard("country", items))
+        bot.send_message(message.chat.id, esc(t(lg, "hasil_negara", n=len(items), q=q)), reply_markup=buy_search_results_keyboard("country", items, lang=lg), parse_mode="MarkdownV2")
     else:
         data = api.legacy("getServicesList")
         items = [
@@ -616,12 +653,13 @@ def _handle_buy_search(message: Message) -> None:
             if isinstance(i, dict) and q in str(i.get("name", "")).lower()
         ]
         if not items:
-            bot.send_message(message.chat.id, f"🔍 Tidak ada layanan yang cocok untuk {code(q)}, coba kata lain")
+            bot.send_message(message.chat.id, esc(t(lg, "tak_cocok_layanan", q=q)), parse_mode="MarkdownV2")
             return
-        bot.send_message(message.chat.id, f"🔍 {code(str(len(items)))} layanan cocok untuk {code(q)}:", reply_markup=buy_search_results_keyboard("service", items))
+        bot.send_message(message.chat.id, esc(t(lg, "hasil_layanan", n=len(items), q=q)), reply_markup=buy_search_results_keyboard("service", items, lang=lg), parse_mode="MarkdownV2")
 
 def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
     """Skema beli baru: negara → layanan → daftar harga → konfirmasi."""
+    lg = _lang(uid)
     country = get_state(uid, "buy_country") or "-"
     set_state(uid, "buy_service", service)
     try:
@@ -632,24 +670,24 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
         )
         entries = sorted(node.get("map", {}).items(), key=lambda kv: float(kv[0]))[:10]
         if not entries:
-            _edit(chat, msg_id, error_msg("Stok Kosong", f"Tidak ada nomor untuk layanan {service} negara {country}"), back_menu())
-            _answer(call, "Stok kosong", alert=True)
+            _edit(chat, msg_id, error_msg(t(lg, "stok_kosong_judul"), t(lg, "stok_kosong", s=service, c=country)), back_menu(lg))
+            _answer(call, t(lg, "stok_kasong_ans"), alert=True)
             return
-        lines = [f"🔹 *Pilih Harga*", ""]
+        lines = ["🔹 *{}*".format(esc(t(lg, "pilih_harga_judul"))), ""]
         p_sname = esc(get_state(uid, "buy_service_name") or service)
         p_cname = esc(get_state(uid, "buy_country_name") or country)
-        lines.append(f"Layanan: {p_sname} \\| Negara: {p_cname}")
+        lines.append(t(lg, "layanan_negara_baris", s=p_sname, c=p_cname))
         lines.append("")
         for price, count in entries:
-            lines.append(f"• {_price_disp(price, uid)} — stok {code(count)}")
+            lines.append("• {} — {}".format(_price_disp(price, uid), esc(t(lg, "stok", n=count))))
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
         kb.add(*[telebot.types.InlineKeyboardButton(_idr_label(price, uid), callback_data=f"buy:price:{price}") for price, _ in entries])
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Batal", callback_data="menu:buy_activation"))
+        kb.add(telebot.types.InlineKeyboardButton("⬅️ " + t(lg, "btn_batal_beli")[2:], callback_data="menu:buy_activation"))
         _edit(chat, msg_id, "\n".join(lines), kb)
-        _answer(call, "Pilih harga")
+        _answer(call, t(lg, "pilih_harga"))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Harga", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_muat_harga"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: CallbackQuery) -> None:
@@ -659,18 +697,20 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: Callba
     sname = get_state(uid, "buy_service_name") or service
     set_state(uid, "buy_price", price)
     # Durasi default aktivasi OTP = 20 menit (custom-durations hanya untuk rent/produk kustom)
-    duration = "20 menit (default aktivasi)"
+    lg = _lang(uid)
+    duration = t(lg, "durasi_default")
     set_state(uid, "buy_duration", duration)
     _edit(
         chat,
         msg_id,
-        buy_confirm_msg(cname, sname, price, "", duration, _price_disp(price, uid)),
-        buy_confirm_keyboard(country, service),
+        buy_confirm_msg(cname, sname, price, "", duration, _price_disp(price, uid), lang=lg),
+        buy_confirm_keyboard(country, service, lang=lg),
     )
-    _answer(call, "Konfirmasi pembelian")
+    _answer(call, t(lg, "konfirmasi_beli_ans"))
 
 
 def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | None = None, call: CallbackQuery | None = None) -> None:
+    lg = _lang(uid)
     if country is None:
         country = get_state(uid, "buy_country")
     try:
@@ -713,101 +753,112 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         set_state(uid, "purchases", pops)
         set_state(uid, "otp_watch", watch)
         if call:
-            _edit(chat, msg_id, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), activation_actions(str(act.get("id", "")), watching=False, status=act.get("status")))
-            _answer(call, "Nomor dibeli")
+            _edit(chat, msg_id, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid), lang=lg), activation_actions(str(act.get("id", "")), watching=False, status=act.get("status"), lang=lg))
+            _answer(call, t(lg, "nomor_dibeli"))
         else:
-            bot.send_message(chat, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid)), reply_markup=activation_actions(str(act.get("id", "")), watching=False, status=act.get("status")))
+            bot.send_message(chat, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid), lang=lg), reply_markup=activation_actions(str(act.get("id", "")), watching=False, status=act.get("status"), lang=lg), parse_mode="MarkdownV2")
     except HeroSMSError as exc:
         if call:
-            _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
-            _answer(call, _alert("Error", exc), alert=True)
+            _edit(chat, msg_id, error_msg(t(lg, "gagal_beli"), str(exc)), back_menu(lg))
+            _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
         else:
-            bot.send_message(chat, error_msg("Gagal Beli Nomor", str(exc)), reply_markup=back_menu())
+            bot.send_message(chat, error_msg(t(lg, "gagal_beli"), str(exc)), reply_markup=back_menu(lg), parse_mode="MarkdownV2")
 
 
 # ── Konfirmasi aksi destructive ─────────────────────────────────
 
 def _show_confirm_finish(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     _edit(
         chat,
         msg_id,
-        confirm_msg("Selesaikan Aktivasi", f"Aktivasi ID {aid} akan ditandai selesai."),
-        confirm_keyboard("finish", aid),
+        confirm_msg(t(lg, "selesaikan_aksi"), t(lg, "selesaikan_detail", a=aid), lang=lg),
+        confirm_keyboard("finish", aid, lang=lg),
     )
-    _answer(call, "Konfirmasi selesai")
+    _answer(call, t(lg, "konfirmasi_selesai_ans"))
 
 
 def _show_confirm_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     _edit(
         chat,
         msg_id,
-        confirm_msg("Batalkan Aktivasi", f"Aktivasi ID {aid} akan dibatalkan dan saldo dikembalikan."),
-        confirm_keyboard("cancel", aid),
+        confirm_msg(t(lg, "batalkan_aksi"), t(lg, "batalkan_detail", a=aid), lang=lg),
+        confirm_keyboard("cancel", aid, lang=lg),
     )
-    _answer(call, "Konfirmasi batalkan")
+    _answer(call, t(lg, "konfirmasi_batal_ans"))
 
 
 # ── Eksekusi aksi ───────────────────────────────────────────────
 
 def _do_finish(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     w = _is_watching(call.from_user.id, aid)
     try:
         api.finish_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Selesai", f"Aktivasi ID {aid} telah diselesaikan."), back_menu())
-        _answer(call, "Selesai")
+        _edit(chat, msg_id, success_msg(t(lg, "selesai_ok"), t(lg, "selesai_ok_detail", a=aid), lang=lg), back_menu(lg))
+        _answer(call, t(lg, "selesai_ans"))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Selesaikan", str(exc)), activation_actions(aid, watching=w))
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_selesaikan"), str(exc)), activation_actions(aid, watching=w, lang=lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _do_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     try:
         api.cancel_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Dibatalkan", f"Aktivasi ID {aid} telah dibatalkan."), back_menu())
-        _answer(call, "Dibatalkan")
+        _edit(chat, msg_id, success_msg(t(lg, "batal_ok"), t(lg, "batal_ok_detail", a=aid), lang=lg), back_menu(lg))
+        _answer(call, t(lg, "batal_ans"))
     except HeroSMSError as exc:
         if "EARLY_CANCEL_DENIED" in str(exc) or "first 2 minutes" in str(exc):
-            _answer(call, "Tunggu 2 menit setelah beli sebelum batalkan. Coba lagi setelah itu.", alert=True)
+            _answer(call, t(lg, "tunggu_2menit"), alert=True)
             return
-        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_batalkan"), str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid), lang=lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 # ── Konfirmasi & eksekusi resend SMS ──────────────────────────────
 
 def _show_confirm_resend(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     _edit(
         chat,
         msg_id,
-        confirm_msg("Kirim Ulang SMS", f"Aktivasi ID {aid} akan meminta pengiriman ulang SMS.\nBiaya mungkin dikenakan sesuai ketentuan layanan."),
-        confirm_keyboard("resend", aid),
+        confirm_msg(t(lg, "btn_resend")[2:], t(lg, "resend_detail", a=aid), lang=lg),
+        confirm_keyboard("resend", aid, lang=lg),
     )
-    _answer(call, "Konfirmasi kirim ulang SMS")
+    _answer(call, t(lg, "konfirmasi_resend_ans"))
 
 
 def _do_resend(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     try:
         api.resend_sms(aid)
-        _edit(chat, msg_id, success_msg("SMS Dikirim Ulang", f"Aktivasi ID {aid}: permintaan resend SMS telah dikirim."), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-        _answer(call, "SMS dikirim ulang")
+        _edit(chat, msg_id, success_msg(t(lg, "resend_ok"), t(lg, "resend_ok_detail", a=aid), lang=lg), activation_actions(aid, watching=_is_watching(call.from_user.id, aid), lang=lg))
+        _answer(call, t(lg, "resend_ans"))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Kirim Ulang", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_kirim_ulang"), str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid), lang=lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     w = _is_watching(call.from_user.id, aid)
     try:
         api.reactivate_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid, watching=w))
-        _answer(call, "Di-reaktivasi")
+        _edit(chat, msg_id, success_msg(t(lg, "reaktivasi_ok"), t(lg, "reaktivasi_ok_detail", a=aid), lang=lg), activation_actions(aid, watching=w, lang=lg))
+        _answer(call, t(lg, "reaktivasi_ans"))
     except HeroSMSError as exc:
         if "SIM_OFFLINE" in str(exc):
-            _edit(chat, msg_id, "🔹 *Nomor Tidak Tersedia*\n\nNomor ini sedang tidak aktif di server, jadi tidak bisa di-reaktivasi sekarang\\. Coba lagi nanti atau beli nomor baru di menu 🛒\\.", activation_actions(aid, watching=w))
-            _answer(call, "Nomor tidak tersedia")
+            _edit(
+                chat, msg_id,
+                "🔹 *{}*\n\n{}".format(esc(t(lg, "sim_offline_judul")), esc(t(lg, "sim_offline"))),
+                activation_actions(aid, watching=w, lang=lg),
+            )
+            _answer(call, t(lg, "sim_offline_ans"))
             return
-        _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=w))
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_reaktivasi"), str(exc)), activation_actions(aid, watching=w, lang=lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
@@ -840,11 +891,13 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
             act["serviceName"] = _service_name(act.get("service"))
             act["countryName"] = _country_name(act.get("country"))
         watch = _is_watching(call.from_user.id, str(aid))
-        _edit(chat, msg_id, activation_detail(act, _price_disp(act.get("price", act.get("cost", "-")), call.from_user.id)), activation_actions(str(aid), watching=watch, status=act.get("status")))
-        _answer(call, "Detail aktivasi")
+        lg = _lang(call.from_user.id)
+        _edit(chat, msg_id, activation_detail(act, _price_disp(act.get("price", act.get("cost", "-")), call.from_user.id), lang=lg), activation_actions(str(aid), watching=watch, status=act.get("status"), lang=lg))
+        _answer(call, t(lg, "detail_aktivasi_ans"))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        lg = _lang(call.from_user.id)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_muat_detail"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 
@@ -852,6 +905,7 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
 
 def _show_active(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
     uid = call.from_user.id
+    lg = _lang(uid)
     size = 15
     try:
         data = api.active_activations(page=page, size=size)
@@ -868,19 +922,20 @@ def _show_active(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> 
                 phone = item.get("phone", "-")
                 kb.add(telebot.types.InlineKeyboardButton(
                     f"📱 {phone} (ID {aid})", callback_data=f"act:view:{aid}"))
-        nav = pagination_keys(page, total, "active")
+        nav = pagination_keys(page, total, "active", lang=lg)
         if nav:
             kb.add(*nav)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
-        _edit(chat, msg_id, active_list_msg(data), kb)
-        _answer(call, f"Halaman {page}/{total}")
+        kb.add(telebot.types.InlineKeyboardButton(t(lg, "btn_kembali"), callback_data="menu:main"))
+        _edit(chat, msg_id, active_list_msg(data, lang=lg), kb)
+        _answer(call, t(lg, "halaman", p=page, t=total))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Aktif", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_muat_aktif"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
     uid = call.from_user.id
+    lg = _lang(uid)
     size = 15
     now = datetime.now(timezone.utc)
     from_ = (now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -895,55 +950,61 @@ def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) ->
             if isinstance(item, dict):
                 aid = item.get("id", "-")
                 phone = item.get("phone", "-")
-                status = status_name(item.get("status", "-"))
+                status = status_name(item.get("status", "-"), lg)
                 kb.add(telebot.types.InlineKeyboardButton(
                     f"📜 {phone} (ID {aid}, {status})", callback_data=f"act:view:{aid}"))
-        nav = pagination_keys(page, total, "history")
+        nav = pagination_keys(page, total, "history", lang=lg)
         if nav:
             kb.add(*nav)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
-        _edit(chat, msg_id, history_msg(data), kb)
-        _answer(call, f"Halaman {page}/{total}")
+        kb.add(telebot.types.InlineKeyboardButton(t(lg, "btn_kembali"), callback_data="menu:main"))
+        _edit(chat, msg_id, history_msg(data, lang=lg), kb)
+        _answer(call, t(lg, "halaman", p=page, t=total))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Riwayat", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_muat_riwayat"), str(exc)), back_menu(lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    lg = _lang(call.from_user.id)
     try:
         data = api.otp_last(aid)
-        _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-        _answer(call, "OTP dimuat")
+        _edit(chat, msg_id, otp_msg(aid, data, lang=lg), activation_actions(aid, watching=_is_watching(call.from_user.id, aid), lang=lg))
+        _answer(call, t(lg, "otp_dimuat"))
     except HeroSMSError as exc:
         if "STATUS_WAIT_CODE" in str(exc):
-            _edit(chat, msg_id, "🔹 *OTP Belum Masuk*\n\nMasih menunggu SMS pertama\\. Nyalakan Notif OTP biar otomatis kabari saat masuk\\.", activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-            _answer(call, "OTP belum masuk")
+            _edit(
+                chat, msg_id,
+                "🔹 *{}*\n\n{}".format(esc(t(lg, "otp_belum_masuk_judul")), esc(t(lg, "otp_belum_masuk"))),
+                activation_actions(aid, watching=_is_watching(call.from_user.id, aid), lang=lg),
+            )
+            _answer(call, t(lg, "otp_belum"))
             return
-        _edit(chat, msg_id, error_msg("Gagal Ambil OTP", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_ambil_otp"), str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid), lang=lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery, page: int = 1) -> None:
     uid = call.from_user.id
+    lg = _lang(uid)
     size = 15
     try:
         data = api.otp_list(aid, page=page, size=size)
         items = data.get("data", []) if isinstance(data, dict) else []
         total = _total_pages_from(data, page, size)
         _set_page(uid, "otp", page, aid=aid)
-        txt = otp_msg(aid, data)
-        kb = activation_actions(aid, watching=_is_watching(uid, aid))
+        txt = otp_msg(aid, data, lang=lg)
+        kb = activation_actions(aid, watching=_is_watching(uid, aid), lang=lg)
         # Sisipkan tombol pagination sebelum tombol kembali
-        nav = pagination_keys(page, total, f"otp:{aid}")
+        nav = pagination_keys(page, total, f"otp:{aid}", lang=lg)
         if nav:
             # activation_actions has row_width; add nav row
             for btn in nav:
                 kb.add(btn)
         _edit(chat, msg_id, txt, kb)
-        _answer(call, f"Halaman {page}/{total}")
+        _answer(call, t(lg, "halaman", p=page, t=total))
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Ambil Daftar OTP", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
-        _answer(call, _alert("Error", exc), alert=True)
+        _edit(chat, msg_id, error_msg(t(lg, "gagal_ambil_daftar_otp"), str(exc)), activation_actions(aid, watching=_is_watching(uid, aid), lang=lg))
+        _answer(call, _alert(t(lg, "error_ans"), exc), alert=True)
 
 
 # ── Run ─────────────────────────────────────────────────────────
@@ -992,9 +1053,10 @@ def _start_otp_poller(bot, interval: int = 30):
                                 try:
                                     api.cancel_activation(pid)
                                     watch[pid] = "off"
+                                    plg = _lang(uid)
                                     bot.send_message(
                                         uid,
-                                        f"⏹ Aktivasi {pid} dibatalkan otomatis \\({limit_min} menit tanpa OTP\\)\\. Saldo dikembalikan\\.",
+                                        t(plg, "autobatal_ok", a=pid, m=limit_min),
                                         parse_mode="MarkdownV2",
                                     )
                                 except HeroSMSError:
@@ -1022,9 +1084,10 @@ def _start_otp_poller(bot, interval: int = 30):
                                 changed = True
                                 set_state(uid, "otp_watch", watch)
                                 log.debug(f"OTP baru aid={aid} uid={uid}")
+                                nl = _lang(uid)
                                 bot.send_message(
                                     uid,
-                                    f"🔔 *OTP Baru untuk Aktivasi {aid}*\n\nKode: *{esc(latest_text)}*",
+                                    t(nl, "otp_baru", a=aid) + f"\n\n{bold(t(nl, 'kode').rstrip(':'))}: *{esc(latest_text)}*",
                                     parse_mode="MarkdownV2",
                                 )
                         except HeroSMSError as exc:
