@@ -526,7 +526,7 @@ def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> No
     try:
         data = api.legacy("getCountries")
         items = _legacy_items(data)
-        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara \\(Indonesia ditampilkan paling atas\\):", buy_countries_keyboard(items))
+        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", buy_countries_keyboard(items))
         _answer(call, "Pilih negara")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
