@@ -138,66 +138,12 @@ class HeroSMS:
     def finish_activation(self, activation_id: str) -> Dict:
         return self._post(f"/activations/{activation_id}/finish")
 
-    def replace_activation(self, activation_id: str) -> Dict:
-        return self._post(f"/activations/{activation_id}/replace")
-
     def reactivate_activation(self, activation_id: str) -> Dict:
         return self._post(f"/activations/{activation_id}/reactivate")
-
-    def reactivate_options(self, activation_id: str) -> Dict:
-        return self._get(f"/activations/{activation_id}/reactivate/options")
 
     def resend_sms(self, activation_id: str) -> Dict:
         """Minta pengiriman ulang SMS (status 3 = request resending of SMS)."""
         return self.legacy("setStatus", {"id": activation_id, "status": 3})
-
-    def lookup_price(self, country: str, service: str) -> tuple[str, str]:
-        """Coba ambil harga dari legacy getPrices. Kembalikan (price, currency).
-
-        Coba beberapa bentuk respons yang mungkin sebelum gagarkan '-'.
-        """
-        try:
-            data = self.legacy("getPrices")
-            if not isinstance(data, dict):
-                return "-", ""
-
-            country_l = country.lower()
-            service_l = service.lower()
-
-            # Format 1: {data: [{service, country, price, currency}, ...]}
-            if isinstance(data.get("data"), list):
-                for item in data["data"]:
-                    if not isinstance(item, dict):
-                        continue
-                    if (str(item.get("service", "")).lower() == service_l
-                            and str(item.get("country", "")).lower() == country_l):
-                        return str(item.get("price", "-")), str(item.get("currency", ""))
-
-            def _extract_price(val):
-                if isinstance(val, dict):
-                    return str(val.get("cost", val.get("price", "-"))), str(val.get("currency", ""))
-                return str(val), ""
-
-            # Format 2: {service: {country: price}} / {country: {service: price}}
-            for k, v in data.items():
-                if not isinstance(v, dict):
-                    continue
-                if str(k).lower() == service_l:
-                    for ck, cv in v.items():
-                        if str(ck).lower() == country_l:
-                            return _extract_price(cv)
-                if str(k).lower() == country_l:
-                    for sk, sv in v.items():
-                        if str(sk).lower() == service_l:
-                            return _extract_price(sv)
-
-            # Format 3: flat {service_country: price}
-            for k, v in data.items():
-                if f"{service}_{country}".lower() == str(k).lower():
-                    return str(v), ""
-        except Exception:  # noqa: BLE001
-            pass
-        return "-", ""
 
     def otp_last(self, activation_id: str) -> Dict:
         return self._get(f"/activations/{activation_id}/otp/last")
@@ -223,9 +169,6 @@ class HeroSMS:
 
     def user_stats(self) -> Dict:
         return self._get("/activations/stats")
-
-    def deliverability_stats(self) -> Dict:
-        return self._get("/stats/deliverability")
 
     def offers(self, verification_type: str, services: Optional[str] = None, countries: Optional[str] = None) -> Dict:
         params: Dict[str, Any] = {}

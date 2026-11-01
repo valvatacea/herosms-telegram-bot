@@ -1,67 +1,65 @@
 # Alur Menu & UX
 
-Dokumen ini menjelaskan navigasi tombol inline bot dari sudut pandang pengguna.
+Navigasi tombol inline bot dari sudut pandang pengguna.
 
 ## Menu utama
 
-Ketik `/start` atau `/menu` untuk membuka:
+Ketik `/start` atau `/menu`:
 
 | Tombol | Tujuan |
 |--------|--------|
-| 💰 Saldo | Lihat saldo tersedia |
-| 📊 Statistik | Ringkasan statistik akun |
-| 🌍 Negara | Daftar negara untuk beli nomor |
-| 📱 Layanan | Daftar layanan verifikasi |
-| 💵 Harga | Harga aktivasi per layanan |
-| 🛒 Beli Nomor | Mulai flow pembelian nomor (pilih negara → layanan → beli) |
-| 📬 Email | Submenu aktivasi email |
-| 📋 Aktif | Daftar aktivasi SMS aktif dengan tombol aksi |
-| 📜 Riwayat | Daftar riwayat aktivasi selesai |
+| 💰 Saldo | Saldo — format ikut mata uang (`💵 $x` / `🇮🇩 Rpx`) |
+| 📊 Statistik | Statistik aktivasi per negara/layanan (nama) |
+| 🛒 Beli Nomor | Mulai flow pembelian (lihat bawah) |
+| 🌬️ Email | Submenu aktivasi email |
+| 📋 Aktif | Daftar aktivasi berjalan (biaya ikut mata uang) |
+| 📜 Riwayat | Riwayat aktivasi selesai (14 hari, batas API) |
+| ⚙️ Pengaturan | Bahasa, mata uang USD/IDR, auto-batal OTP |
 | ❌ Tutup | Tutup menu |
 
-## Flow beli nomor SMS
+## Flow beli nomor OTP SMS
 
 ```
-Menu Utama → 🛒 Beli Nomor → Pilih Negara → Pilih Layanan → Konfirmasi beli
-                                                            ↓
-                                                    ✅ Nomor Dibeli
-                                                    ↓
-                                          📨 OTP Terakhir / 📋 Semua OTP
-                                          ✅ Selesai / ❌ Batalkan (dikorekansi)
-                                          🔄 Reaktivasi / ⏳ Perpanjang
+🛒 Beli Nomor
+   ↓ Pilih Negara (Indonesia → ASEAN → populer → alfabetis; 15/halaman, 2 kolom, 🔍 cari)
+   ↓ Pilih Layanan (Google/sosmed dulu; 15/halaman, 🔍 cari)
+   ↓ Pilih Harga (10 termurah dari offers + stok; 💵 USD / 🇮🇩 Rp)
+   ↓ Konfirmasi (negara, layanan, harga, durasi 20 menit)
+   ✅ Nomor Dibeli (ID, nomor, biaya, kedaluwarsa WIB + bar sisa durasi)
 ```
 
-Aksi destructive (Selesai, Batalkan) memerlukan konfirmasi dua kali (`Ya, yakin` / `Batalin`) untuk mencegah klik tidak sengaja.
+Nomor HP hanya ada SETELAH pembelian sukses (di-assign provider saat transaksi).
 
-## Flow aktivasi email
-
-```
-Menu Utama → 📬 Email → 📧 Domain / 💵 Offers / 📬 Daftar Email
-                                      ↓
-                                Pilih Domain → Pilih Layanan → Konfirmasi beli
-                                                              ↓
-                                                        ✅ Aktivasi Email Dibeli
-```
-
-Daftar email aktif menampilkan setiap entri sebagai tombol yang dapat diklik untuk melihat detail.
-
-## Detail aktivasi
-
-Setiap aktivasi aktif memiliki tombol:
+## Tombol pada aktivasi
 
 | Tombol | Aksi |
 |--------|------|
-| 📨 OTP Terakhir | Lihat kode OTP paling baru |
-| 📋 Semua OTP | Lihat seluruh kode OTP |
-| ✅ Selesai | Tandai selesai (dikorekansi dulu) |
-| ❌ Batalkan | Batalkan & saldo dikembalikan (dikorekansi dulu) |
-| 🔄 Reaktivasi | Hidupkan kembali aktivasi |
-| ⏳ Perpanjang | Perpanjang masa aktif |
-| 🔄 Kirim Ulang SMS | Minta pengiriman ulang SMS (dikorekansi dulu) |
-| 🔔 Nyalakan / Matikan Notif OTP | Aktifkan/nonaktifkan notifikasi OTP otomatis (default ON) |
+| 📨 OTP Terakhir | OTP terbaru (belum masuk → pesan menunggu, bukan error) |
+| 📋 Semua OTP | Seluruh OTP yang pernah masuk |
+| 🔄 Kirim Ulang SMS | Minta provider kirim ulang SMS |
+| 🔔 / 🔕 Notif OTP | Toggle notifikasi OTP otomatis (default ON) |
+| 🚫 OTP Tidak Muncul? Batalkan | Batal + refund (konfirmasi dulu; provider larang <2 menit pertama) |
+| ✅ Selesai | Tandai selesai (konfirmasi dulu; tanpa refund) |
+| 🔄 Reaktivasi | Hidupkan nomor yang sudah selesai |
+| ⬅️ Daftar Aktif / 🏠 Menu Utama | Navigasi |
+
+## Pengaturan
+
+| Tombol | Siklus |
+|--------|--------|
+| 🌐 Bahasa | Indonesia (English: segera) |
+| 💵 USD / 🇮🇩 IDR | Mata uang tampilan (IDR = konversi kurs, cache 24 jam) |
+| ⏱ Auto-Batal OTP | NONAKTIF → 5 → 10 → 15 menit (batal otomatis tanpa OTP + refund + notif) |
+
+## Email
+
+```
+🌬️ Email → 📧 Domain / 💵 Offers / 📬 Daftar Email
+```
+Domain & offers meminta input `site` (contoh: telegram.com) sebelum render.
 
 ## Pesan sistem
 
-- Pesan error ditampilkan dalam kotak `❌` dan tidak mentah.
-- Pesan sukses ditampilkan dalam kotak `✅`.
-- Konfirmasi destructive ditampilkan dalam kotak `⚠️`.
+- Error → kotak `❌` (pesan provider, bukan stack mentah) 
+- Sukses → kotak `✅`; konfirmasi destructive → kotak `⚠️`
+- Semua render MarkdownV2 di-escape penuh

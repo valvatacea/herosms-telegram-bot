@@ -5,7 +5,7 @@ import json
 import logging
 import os
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import Dict
 
 try:
     import fcntl

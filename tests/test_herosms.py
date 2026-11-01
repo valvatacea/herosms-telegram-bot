@@ -101,50 +101,8 @@ def test_buy_confirm_msg():
     print("OK test_buy_confirm_msg")
 
 
-def test_lookup_price_list_format():
-    from bot.client import HeroSMS
-    from unittest.mock import MagicMock
-    api = HeroSMS.__new__(HeroSMS)
-    api.legacy = MagicMock(return_value={
-        "data": [{"service": "wa", "country": "id", "price": "0.5", "currency": "IDR"}]
-    })
-    price, cur = api.lookup_price("id", "wa")
-    assert price == "0.5"
-    assert cur == "IDR"
-    print("OK test_lookup_price_list_format")
 
 
-def test_lookup_price_nested_format():
-    from bot.client import HeroSMS
-    from unittest.mock import MagicMock
-    api = HeroSMS.__new__(HeroSMS)
-    api.legacy = MagicMock(return_value={"wa": {"id": {"price": "0.7", "currency": "IDR"}}})
-    price, cur = api.lookup_price("id", "wa")
-    assert price == "0.7"
-    assert cur == "IDR"
-    print("OK test_lookup_price_nested_format")
-
-
-def test_lookup_price_flat_format():
-    from bot.client import HeroSMS
-    from unittest.mock import MagicMock
-    api = HeroSMS.__new__(HeroSMS)
-    api.legacy = MagicMock(return_value={"wa_id": "0.9"})
-    price, cur = api.lookup_price("id", "wa")
-    assert price == "0.9"
-    assert cur == ""
-    print("OK test_lookup_price_flat_format")
-
-
-def test_lookup_price_not_found():
-    from bot.client import HeroSMS
-    from unittest.mock import MagicMock
-    api = HeroSMS.__new__(HeroSMS)
-    api.legacy = MagicMock(return_value={"data": [{"service": "wa", "country": "us", "price": "1.0", "currency": "USD"}]})
-    price, cur = api.lookup_price("id", "wa")
-    assert price == "-"
-    assert cur == ""
-    print("OK test_lookup_price_not_found")
 
 
 if __name__ == "__main__":
@@ -156,8 +114,4 @@ if __name__ == "__main__":
     test_active_list_msg_empty()
     test_purchase_success()
     test_buy_confirm_msg()
-    test_lookup_price_list_format()
-    test_lookup_price_nested_format()
-    test_lookup_price_flat_format()
-    test_lookup_price_not_found()
     print("\nSemua tes lolos.")

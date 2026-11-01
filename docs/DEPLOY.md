@@ -27,7 +27,7 @@ Jangan pernah commit `.env` — sudah tercantum di `.gitignore`.
 ## 3. Jalankan bot
 
 ```bash
-python bot/main.py
+python3 -m bot.main   # BUKAN python3 bot/main.py
 ```
 
 Bot akan menjalankan `infinity_polling` dan siap menerima pesan.
