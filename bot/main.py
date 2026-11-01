@@ -748,8 +748,7 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
     uid = call.from_user.id
     purchases = get_state(uid, "purchases", []) or []
     if not purchases:
-        txt = "💰 *Riwayat Transaksi*\n\nBelum ada pembelian."
-        _edit(chat, msg_id, txt, back_menu())
+        txt = "💰 *Riwayat Transaksi*\n\nBelum ada pembelian\\."
         _answer(call, "Belum ada transaksi")
         return
 
@@ -783,7 +782,7 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
         if cur_price != hist_price:
             line += f" (sekarang: {cur_price} {cur_cur})"
         lines.append(line)
-    lines.append(f"\n*Total:* {total:g}")
+    lines.append(f"\n*Total:* {esc(f'{total:g}')}")
     kb = InlineKeyboardMarkup(row_width=1)
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
     _edit(chat, msg_id, "\n".join(lines), kb)
