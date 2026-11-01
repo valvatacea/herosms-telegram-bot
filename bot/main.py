@@ -21,6 +21,8 @@ from bot.keyboards import (
     buy_countries_keyboard,
     buy_services_keyboard,
     buy_confirm_keyboard,
+    pagination_keys,
+    list_with_pagination,
 )
 from bot.messages import (
     esc,
@@ -43,6 +45,52 @@ from bot.messages import (
     success_msg,
 )
 from bot.state import user_state, set_state, get_state, clear_state
+
+# ── Helper halaman state ──────────────────────────────────────────
+
+def _get_page(uid: int, list_name: str, aid: str | None = None) -> int:
+    pages = get_state(uid, "pages", {}) or {}
+    if aid:
+        otp_pages = pages.get("otp", {}) or {}
+        return int(otp_pages.get(aid, 1))
+    return int(pages.get(list_name, 1))
+
+
+def _set_page(uid: int, list_name: str, page: int, aid: str | None = None) -> None:
+    pages = get_state(uid, "pages", {}) or {}
+    if aid:
+        otp_pages = pages.get("otp", {}) or {}
+        otp_pages[aid] = page
+        pages["otp"] = otp_pages
+    else:
+        pages[list_name] = page
+    set_state(uid, "pages", pages)
+
+
+def _total_pages_from(data: dict, page: int, size: int) -> int:
+    """Estimasi total halaman dari respons API. Default: page (+1 jika penuh)."""
+    if not isinstance(data, dict):
+        return page
+    # Coba baca info pagination dari respons
+    for key in ("total", "totalPages", "pages", "last_page"):
+        if key in data:
+            try:
+                return max(1, int(data[key]))
+            except (ValueError, TypeError):
+                pass
+    meta = data.get("meta")
+    if isinstance(meta, dict):
+        for key in ("total", "totalPages", "pages", "last_page"):
+            if key in meta:
+                try:
+                    return max(1, int(meta[key]))
+                except (ValueError, TypeError):
+                    pass
+    items = data.get("data", [])
+    if isinstance(items, list) and len(items) >= size:
+        return page + 1  # ada kemungkinan halaman berikutnya
+    return page
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("herosms-bot")
@@ -134,10 +182,10 @@ def on_callback(call: CallbackQuery) -> None:
             _show_email_menu(chat, msg_id, call)
 
         elif data == "menu:active":
-            _show_active(chat, msg_id, call)
+            _show_active(chat, msg_id, call, page=1)
 
         elif data == "menu:history":
-            _show_history(chat, msg_id, call)
+            _show_history(chat, msg_id, call, page=1)
 
         elif data.startswith("buy:country:"):
             country = data.split(":", 2)[2]
@@ -160,7 +208,25 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data.startswith("otp:list:"):
             aid = data.split(":", 2)[2]
-            _show_otp_list(chat, msg_id, aid, call)
+            _show_otp_list(chat, msg_id, aid, call, page=1)
+
+        elif data.startswith("active:page:"):
+            page = int(data.split(":", 2)[2])
+            _show_active(chat, msg_id, call, page=page)
+
+        elif data.startswith("history:page:"):
+            page = int(data.split(":", 2)[2])
+            _show_history(chat, msg_id, call, page=page)
+
+        elif data.startswith("email:page:"):
+            page = int(data.split(":", 2)[2])
+            _show_email_list(chat, msg_id, call, page=page)
+
+        elif data.startswith("otp:page:"):
+            parts = data.split(":", 3)
+            aid = parts[2]
+            page = int(parts[3])
+            _show_otp_list(chat, msg_id, aid, call, page=page)
 
         elif data.startswith("act:view:"):
             aid = data.split(":", 2)[2]
@@ -199,7 +265,7 @@ def on_callback(call: CallbackQuery) -> None:
             _show_email_offers(chat, msg_id, call)
 
         elif data.startswith("email:list"):
-            _show_email_list(chat, msg_id, call)
+            _show_email_list(chat, msg_id, call, page=1)
 
         elif data.startswith("email:buy:"):
             domain = data.split(":", 2)[2]
@@ -469,21 +535,27 @@ def _show_email_offers(chat: int, msg_id: int, call: CallbackQuery) -> None:
         _answer(call, str(exc), alert=True)
 
 
-def _show_email_list(chat: int, msg_id: int, call: CallbackQuery) -> None:
+def _show_email_list(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
+    uid = call.from_user.id
+    size = 15
     try:
-        data = api.email_list()
+        data = api.email_list(page=page, size=size)
         items = data.get("data", []) if isinstance(data, dict) else []
+        total = _total_pages_from(data, page, size)
+        _set_page(uid, "email", page)
         kb = telebot.types.InlineKeyboardMarkup(row_width=1)
-        for item in items[:15]:
+        for item in items[:size]:
             if isinstance(item, dict):
                 eid = item.get("id", "-")
                 email = item.get("email") or item.get("domain", "-")
                 kb.add(telebot.types.InlineKeyboardButton(
                     f"📬 {email} (ID {eid})", callback_data=f"email:detail:{eid}"))
-        kb.add(telebot.types.InlineKeyboardButton("🔄 Segarkan", callback_data="email:list"))
+        nav = pagination_keys(page, total, "email")
+        if nav:
+            kb.add(*nav)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:email"))
         _edit(chat, msg_id, email_list_msg(data), kb)
-        _answer(call, "Daftar email dimuat")
+        _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Email", str(exc)), back_menu())
         _answer(call, str(exc), alert=True)
@@ -554,31 +626,54 @@ def _do_email_reorder(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> 
 
 # ── Aktivasi SMS ────────────────────────────────────────────────
 
-def _show_active(chat: int, msg_id: int, call: CallbackQuery) -> None:
+def _show_active(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
+    uid = call.from_user.id
+    size = 15
     try:
-        data = api.active_activations()
+        data = api.active_activations(page=page, size=size)
         items = data.get("data", []) if isinstance(data, dict) else []
+        total = _total_pages_from(data, page, size)
+        _set_page(uid, "active", page)
         kb = telebot.types.InlineKeyboardMarkup(row_width=1)
-        for item in items[:15]:
+        for item in items[:size]:
             if isinstance(item, dict):
                 aid = item.get("id", "-")
                 phone = item.get("phone", "-")
                 kb.add(telebot.types.InlineKeyboardButton(
                     f"📱 {phone} (ID {aid})", callback_data=f"act:view:{aid}"))
-        kb.add(telebot.types.InlineKeyboardButton("🔄 Segarkan", callback_data="menu:active"))
+        nav = pagination_keys(page, total, "active")
+        if nav:
+            kb.add(*nav)
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
         _edit(chat, msg_id, active_list_msg(data), kb)
-        _answer(call, "Aktivasi aktif dimuat")
+        _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Aktif", str(exc)), back_menu())
         _answer(call, str(exc), alert=True)
 
 
-def _show_history(chat: int, msg_id: int, call: CallbackQuery) -> None:
+def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
+    uid = call.from_user.id
+    size = 15
     try:
-        data = api.activation_history()
-        _edit(chat, msg_id, history_msg(data), back_menu())
-        _answer(call, "Riwayat dimuat")
+        data = api.activation_history(page=page, size=size)
+        items = data.get("data", []) if isinstance(data, dict) else []
+        total = _total_pages_from(data, page, size)
+        _set_page(uid, "history", page)
+        kb = telebot.types.InlineKeyboardMarkup(row_width=1)
+        for item in items[:size]:
+            if isinstance(item, dict):
+                aid = item.get("id", "-")
+                phone = item.get("phone", "-")
+                status = item.get("status", "-")
+                kb.add(telebot.types.InlineKeyboardButton(
+                    f"📜 {phone} (ID {aid}, {status})", callback_data=f"act:view:{aid}"))
+        nav = pagination_keys(page, total, "history")
+        if nav:
+            kb.add(*nav)
+        kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
+        _edit(chat, msg_id, history_msg(data), kb)
+        _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Riwayat", str(exc)), back_menu())
         _answer(call, str(exc), alert=True)
@@ -615,11 +710,24 @@ def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _answer(call, str(exc), alert=True)
 
 
-def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery, page: int = 1) -> None:
+    uid = call.from_user.id
+    size = 15
     try:
-        data = api.otp_list(aid)
-        _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid))
-        _answer(call, "Daftar OTP dimuat")
+        data = api.otp_list(aid, page=page, size=size)
+        items = data.get("data", []) if isinstance(data, dict) else []
+        total = _total_pages_from(data, page, size)
+        _set_page(uid, "otp", page, aid=aid)
+        txt = otp_msg(aid, data)
+        kb = activation_actions(aid)
+        # Sisipkan tombol pagination sebelum tombol kembali
+        nav = pagination_keys(page, total, f"otp:{aid}")
+        if nav:
+            # activation_actions has row_width; add nav row
+            for btn in nav:
+                kb.add(btn)
+        _edit(chat, msg_id, txt, kb)
+        _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Ambil Daftar OTP", str(exc)), activation_actions(aid))
         _answer(call, str(exc), alert=True)

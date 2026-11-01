@@ -125,3 +125,26 @@ def email_menu() -> InlineKeyboardMarkup:
     )
     kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
     return kb
+
+
+# ── Pagination ────────────────────────────────────────────────────
+
+def pagination_keys(page: int, total_pages: int, prefix: str) -> list[InlineKeyboardButton]:
+    """Tombol prev/next untuk daftar yang dipaginasi. prefix = 'active'|'history'|'email'."""
+    buttons: list[InlineKeyboardButton] = []
+    if page > 1:
+        buttons.append(InlineKeyboardButton("⬅️ Sebelumnya", callback_data=f"{prefix}:page:{page - 1}"))
+    if page < total_pages:
+        buttons.append(InlineKeyboardButton("Selanjutnya ➡️", callback_data=f"{prefix}:page:{page + 1}"))
+    return buttons
+
+
+def list_with_pagination(items_per_page: list, page: int, total_pages: int, prefix: str) -> InlineKeyboardMarkup:
+    """Keyboard daftar item + tombol navigasi halaman."""
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(*items_per_page)
+    nav = pagination_keys(page, total_pages, prefix)
+    if nav:
+        kb.add(*nav)
+    kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
+    return kb
