@@ -4,18 +4,22 @@ pesan error ramah, dan navigasi yang konsisten."""
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-from typing import Dict, Optional
+from typing import Dict
 
 import telebot
 from telebot.types import Message, CallbackQuery
 
-from config import BOT_TOKEN, HEROSMS_API_KEY, HEROSMS_BASE_URL
-from herosms import HeroSMS, HeroSMSError
-from keyboards import main_menu, back_menu, activation_actions, confirm_keyboard, email_menu
-from messages import (
+from bot.config import BOT_TOKEN, HEROSMS_API_KEY, HEROSMS_BASE_URL
+from bot.client import HeroSMS, HeroSMSError
+from bot.keyboards import (
+    main_menu,
+    back_menu,
+    activation_actions,
+    confirm_keyboard,
+    email_menu,
+)
+from bot.messages import (
     esc,
     balance_msg,
     stats_msg,
@@ -34,48 +38,13 @@ from messages import (
     error_msg,
     success_msg,
 )
+from bot.state import user_state, set_state, get_state, clear_state
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("herosms-bot")
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="MarkdownV2")
 api = HeroSMS(HEROSMS_API_KEY, HEROSMS_BASE_URL)
-
-STATE_FILE = os.path.join(os.path.dirname(__file__), "user_state.json")
-
-
-def _load_state() -> Dict[int, Dict]:
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        return {int(k): v for k, v in raw.items()}
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def _save_state(state: Dict[int, Dict]) -> None:
-    try:
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump({str(k): v for k, v in state.items()}, f, ensure_ascii=False)
-    except OSError as exc:
-        log.warning("Gagal simpan state: %s", exc)
-
-
-user_state: Dict[int, Dict] = _load_state()
-
-
-def _set_state(uid: int, key: str, val) -> None:
-    user_state.setdefault(uid, {})[key] = val
-    _save_state(user_state)
-
-
-def _get_state(uid: int, key: str, default=None):
-    return user_state.get(uid, {}).get(key, default)
-
-
-def _clear_state(uid: int) -> None:
-    user_state.pop(uid, None)
-    _save_state(user_state)
 
 
 def _answer(call: CallbackQuery, text: str, alert: bool = False) -> None:
@@ -168,7 +137,7 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data.startswith("buy:country:"):
             country = data.split(":", 2)[2]
-            _set_state(uid, "buy_country", country)
+            set_state(uid, "buy_country", country)
             _show_services_for_buy(chat, msg_id, uid, country, call)
 
         elif data.startswith("buy:service:"):
@@ -224,7 +193,7 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data.startswith("email:buy:"):
             domain = data.split(":", 2)[2]
-            _set_state(uid, "email_domain", domain)
+            set_state(uid, "email_domain", domain)
             _show_email_services_for_buy(chat, msg_id, uid, domain, call)
 
         elif data.startswith("email:service:"):
@@ -350,10 +319,10 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
 
 
 def _do_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
-    country = _get_state(uid, "buy_country")
+    country = get_state(uid, "buy_country")
     try:
         act = api.buy_activation(service=service, country=country)
-        _clear_state(uid)
+        clear_state(uid)
         _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", ""))))
         _answer(call, "Nomor dibeli")
     except HeroSMSError as exc:
@@ -505,10 +474,10 @@ def _show_email_services_for_buy(chat: int, msg_id: int, uid: int, domain: str, 
 
 
 def _do_email_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
-    domain = _get_state(uid, "email_domain")
+    domain = get_state(uid, "email_domain")
     try:
         act = api.buy_email_activation(domain=domain, service=service)
-        _clear_state(uid)
+        clear_state(uid)
         _edit(chat, msg_id, purchase_success(act), email_menu())
         _answer(call, "Aktivasi email dibeli")
     except HeroSMSError as exc:

@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from herosms import HeroSMS, HeroSMSError
-from messages import esc, bold, code, header, active_list_msg, purchase_success
+from bot.client import HeroSMS, HeroSMSError
+from bot.messages import esc, bold, code, active_list_msg, purchase_success
 
 
 def _mock_session(payload, status=200):
@@ -38,10 +38,10 @@ def _mock_session(payload, status=200):
 
 def test_buy_activation():
     api = HeroSMS("k", "https://hero-sms.com/api/v1")
-    api.session = _mock_session({"id": 1, "phone": "+628123456789", "status": "pending"})
+    api.session = _mock_session({"id": 1, "phone": "+628****6789", "status": "pending"})
     act = api.buy_activation(service="wa", country="id")
     assert act["id"] == 1
-    assert act["phone"] == "+628123456789"
+    assert act["phone"] == "+628****6789"
     print("OK test_buy_activation")
 
 

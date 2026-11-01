@@ -33,7 +33,7 @@ def activation_actions(activation_id: str) -> InlineKeyboardMarkup:
     kb.add(
         InlineKeyboardButton("📨 OTP Terakhir", callback_data=f"otp:last:{activation_id}"),
         InlineKeyboardButton("📋 Semua OTP", callback_data=f"otp:list:{activation_id}"),
-        # Destructive actions now require confirmation
+        # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),
         InlineKeyboardButton("❌ Batalkan", callback_data=f"act:confirm:cancel:{activation_id}"),
         InlineKeyboardButton("🔄 Reaktivasi", callback_data=f"act:reactivate:{activation_id}"),
