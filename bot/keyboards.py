@@ -70,57 +70,104 @@ def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyb
     return kb
 
 
-# ── Keyboard pembelian (negara & layanan, populer dulu) ─────────
+# ── Keyboard pembelian (negara & layanan: populer dulu + paginasi + cari) ──
 
-POPULAR_COUNTRY_IDS = ["6", "id", "ID", "Indonesia", "indonesia"]
-POPULAR_SERVICE_IDS = ["wa", "whatsapp", "tg", "telegram", "fb", "facebook", "ig", "instagram", "sms", "sms-verify"]
-
-
-def _popular_first(items, popular_ids, id_key="id", name_key="name"):
-    """Urutkan item: yang populer dulu, lalu yang lain."""
-    popular_set = {str(p).lower() for p in popular_ids}
-    pop, rest = [], []
-    for it in items:
-        if not isinstance(it, dict):
-            rest.append(it)
-            continue
-        vid = str(it.get(id_key, it.get(name_key, ""))).lower()
-        (pop if vid in popular_set else rest).append(it)
-    return pop + rest
+_COUNTRY_ORDER = (
+    ["Indonesia", "Singapore", "Malaysia", "Thailand", "Vietnam", "Philippines",
+     "Myanmar", "Cambodia", "Laos", "Brunei"]
+    + ["United States", "United Kingdom", "Russia", "China", "India", "Germany",
+       "France", "Japan", "South Korea", "Turkey", "Egypt", "Brazil", "Mexico",
+       "Nigeria", "Pakistan", "Bangladesh", "Ukraine", "Kazakhstan"]
+)
+_SERVICE_ORDER = ["google", "whatsapp", "telegram", "facebook", "instagram",
+                  "tiktok", "discord", "twitter", "line", "amazon", "apple",
+                  "microsoft", "netflix", "spotify", "steam"]
 
 
-def buy_countries_keyboard(items):
+def order_countries(items):
+    """Indonesia → ASEAN → populer → sisanya alfabetis."""
+    pos = {n.lower(): i for i, n in enumerate(_COUNTRY_ORDER)}
+    dicts = [i for i in items if isinstance(i, dict)]
+    def key(it):
+        n = str(it.get("eng", it.get("name", ""))).lower()
+        if n in pos:
+            return (0, pos[n])
+        return (1, n)
+    return sorted(dicts, key=key)
+
+
+def order_services(items):
+    """Layanan populer (sosmed/Google) dulu → sisanya alfabetis."""
+    dicts = [i for i in items if isinstance(i, dict)]
+    def key(it):
+        n = str(it.get("name", "")).lower()
+        for j, p in enumerate(_SERVICE_ORDER):
+            if n.startswith(p):
+                return (0, j)
+        return (1, n)
+    return sorted(dicts, key=key)
+
+
+def _page_slice(items, page, per):
+    total = max(1, (len(items) + per - 1) // per)
+    page = min(max(1, page), total)
+    return items[(page - 1) * per:page * per], page, total
+
+
+def _nav_row(kb, page, total, prefix):
+    nav = []
+    if page > 1:
+        nav.append(InlineKeyboardButton("‹ Sebelumnya", callback_data=f"{prefix}:{page-1}"))
+    if page < total:
+        nav.append(InlineKeyboardButton("Berikutnya ›", callback_data=f"{prefix}:{page+1}"))
+    if nav:
+        kb.add(*nav)
+
+
+def buy_countries_keyboard(items, page=1, per=20):
     kb = InlineKeyboardMarkup(row_width=2)
-    ordered = _popular_first(items, POPULAR_COUNTRY_IDS)
-    buttons = []
-    for item in ordered[:20]:
-        if isinstance(item, dict):
-            name = item.get("eng", item.get("name", "-"))
-            cid = item.get("id", item.get("code", "-"))
-        else:
-            name = str(item)
-            cid = str(item)
-        label = f"{flag(name)} {name}"
-        buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}:{str(name)[:30]}"))
-    kb.add(*buttons)
+    chunk, page, total = _page_slice(order_countries(items), page, per)
+    for item in chunk:
+        name = item.get("eng", item.get("name", "-"))
+        cid = item.get("id", item.get("code", "-"))
+        kb.add(InlineKeyboardButton(f"{flag(name)} {name}", callback_data=f"buy:country:{cid}:{str(name)[:30]}"))
+    _nav_row(kb, page, total, "buy:countries")
+    kb.add(InlineKeyboardButton(f"🔍 Cari Negara ({page}/{total})", callback_data="buy:search:country"))
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
     return kb
 
 
-def buy_services_keyboard(items):
+def buy_services_keyboard(items, page=1, per=25):
     kb = InlineKeyboardMarkup(row_width=2)
-    ordered = _popular_first(items, POPULAR_SERVICE_IDS)
-    buttons = []
-    for item in ordered[:25]:
-        if isinstance(item, dict):
+    chunk, page, total = _page_slice(order_services(items), page, per)
+    for item in chunk:
+        name = item.get("name", "-")
+        sid = item.get("id", item.get("code", "-"))
+        kb.add(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}:{str(name)[:30]}"))
+    _nav_row(kb, page, total, "buy:services")
+    kb.add(InlineKeyboardButton(f"🔍 Cari Layanan ({page}/{total})", callback_data="buy:search:service"))
+    kb.add(InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
+    return kb
+
+
+def buy_search_results_keyboard(kind: str, items):
+    """Hasil pencarian negara/layanan (max 20)."""
+    kb = InlineKeyboardMarkup(row_width=1)
+    for item in items[:20]:
+        if not isinstance(item, dict):
+            continue
+        if kind == "country":
+            name = item.get("eng", item.get("name", "-"))
+            cid = item.get("id", item.get("code", "-"))
+            kb.add(InlineKeyboardButton(f"{flag(name)} {name}", callback_data=f"buy:country:{cid}:{str(name)[:30]}"))
+        else:
             name = item.get("name", "-")
             sid = item.get("id", item.get("code", "-"))
-        else:
-            name = str(item)
-            sid = str(item)
-        buttons.append(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}:{str(name)[:30]}"))
-    kb.add(*buttons)
-    kb.add(InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
+            kb.add(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}:{str(name)[:30]}"))
+    if kind == "country":
+        kb.add(InlineKeyboardButton("⬅️ Semua Negara", callback_data="buy:countries:1"))
+    else:
+        kb.add(InlineKeyboardButton("⬅️ Semua Layanan", callback_data="buy:services:1"))
     return kb
 
 

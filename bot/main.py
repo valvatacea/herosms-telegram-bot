@@ -27,6 +27,7 @@ from bot.keyboards import (
     list_with_pagination,
     settings_menu,
     settings_lang_menu,
+    buy_search_results_keyboard,
 )
 from bot.messages import (
     esc,
@@ -367,6 +368,24 @@ def on_callback(call: CallbackQuery) -> None:
             _show_settings(chat, msg_id, uid, call)
             _answer(call, "Nonaktif" if nxt == "off" else f"Auto-batal: {nxt} menit")
 
+        elif data.startswith("buy:countries:"):
+            _show_countries_page(chat, msg_id, uid, int(data.split(":")[2]), call)
+
+        elif data.startswith("buy:services:"):
+            _show_services_page(chat, msg_id, uid, int(data.split(":")[2]), call)
+
+        elif data == "buy:search:country":
+            set_state(uid, "_buy_search", "country")
+            bot.send_message(chat, "🔍 Ketik nama negara yang dicari:")
+            bot.register_next_step_handler(call.message, _handle_buy_search)
+            _answer(call, "Mode pencarian negara")
+
+        elif data == "buy:search:service":
+            set_state(uid, "_buy_search", "service")
+            bot.send_message(chat, "🔍 Ketik nama layanan yang dicari:")
+            bot.register_next_step_handler(call.message, _handle_buy_search)
+            _answer(call, "Mode pencarian layanan")
+
         elif data.startswith("buy:country:"):
             parts = data.split(":", 3)
             country = parts[2]
@@ -580,32 +599,76 @@ def _show_prices(chat: int, msg_id: int, call: CallbackQuery) -> None:
 
 
 def _start_buy_flow(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
+    _show_countries_page(chat, msg_id, uid, 1, call)
+
+
+def _show_countries_page(chat: int, msg_id: int, uid: int, page: int, call: CallbackQuery) -> None:
     try:
         data = api.legacy("getCountries")
         items = _legacy_items(data)
-        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", buy_countries_keyboard(items))
-        _answer(call, "Pilih negara")
+        total = max(1, (len(items) + 19) // 20)
+        page = min(max(1, page), total)
+        _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", buy_countries_keyboard(items, page))
+        _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Negara", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
 
 
 def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call: CallbackQuery) -> None:
+    _show_services_page(chat, msg_id, uid, 1, call)
+
+
+def _show_services_page(chat: int, msg_id: int, uid: int, page: int, call: CallbackQuery) -> None:
+    country = get_state(uid, "buy_country") or "-"
     try:
-        set_state(uid, "buy_country", country)
         data = api.legacy("getServicesList")
         items = _legacy_items(data)
+        total = max(1, (len(items) + 24) // 25)
+        page = min(max(1, page), total)
         cname = esc(get_state(uid, "buy_country_name") or country)
         _edit(
             chat,
             msg_id,
             "🔹 *Layanan \\- {country}*".format(country=cname) + "\n\nPilih layanan:",
-            buy_services_keyboard(items),
+            buy_services_keyboard(items, page),
         )
-        _answer(call, "Pilih layanan")
+        _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
+
+
+def _handle_buy_search(message: Message) -> None:
+    """Handler hasil ketikan pencarian negara/layanan."""
+    uid = message.from_user.id
+    if not message.text or message.text.startswith("/"):
+        return
+    q = message.text.strip().lower()
+    if not q:
+        return
+    kind = get_state(uid, "_buy_search") or "country"
+    set_state(uid, "_buy_search", None)
+    if kind == "country":
+        data = api.legacy("getCountries")
+        items = [
+            i for i in _legacy_items(data)
+            if isinstance(i, dict) and q in str(i.get("eng", i.get("name", ""))).lower()
+        ]
+        if not items:
+            bot.send_message(message.chat.id, f"🔍 Tidak ada negara yang cocok untuk {code(q)}, coba kata lain")
+            return
+        bot.send_message(message.chat.id, f"🔍 {code(str(len(items)))} negara cocok untuk {code(q)}:", reply_markup=buy_search_results_keyboard("country", items))
+    else:
+        data = api.legacy("getServicesList")
+        items = [
+            i for i in _legacy_items(data)
+            if isinstance(i, dict) and q in str(i.get("name", "")).lower()
+        ]
+        if not items:
+            bot.send_message(message.chat.id, f"🔍 Tidak ada layanan yang cocok untuk {code(q)}, coba kata lain")
+            return
+        bot.send_message(message.chat.id, f"🔍 {code(str(len(items)))} layanan cocok untuk {code(q)}:", reply_markup=buy_search_results_keyboard("service", items))
 
 def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
     """Skema beli baru: negara → layanan → daftar harga → konfirmasi."""
