@@ -49,7 +49,7 @@ from bot.messages import (
     error_msg,
     success_msg,
 )
-from bot.state import user_state, set_state, get_state, clear_state
+from bot.state import user_state, set_state, get_state, drop_state
 
 # ── Helper halaman state ──────────────────────────────────────────
 
@@ -747,11 +747,14 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         }
         pops = get_state(uid, "purchases", []) or []
         pops.append(pur)
-        watch = _get_watch(uid) or {}
         set_state(uid, "purchases", pops)
-        clear_state(uid)
-        set_state(uid, "purchases", pops)
-        set_state(uid, "otp_watch", watch)
+        # Bersihkan hanya state alur beli — clear_state() akan menghapus
+        # settings_lang/currency/autocancel juga (bug: bahasa balik ke ID sendiri)
+        drop_state(
+            uid,
+            "buy_country", "buy_country_name", "buy_service", "buy_service_name",
+            "buy_price", "buy_currency", "buy_duration", "_buy_search",
+        )
         if call:
             _edit(chat, msg_id, purchase_success(act, _price_disp(act.get("price", get_state(uid, "buy_price", "-")), uid), lang=lg), activation_actions(str(act.get("id", "")), watching=False, status=act.get("status"), lang=lg))
             _answer(call, t(lg, "nomor_dibeli"))

@@ -80,3 +80,14 @@ def clear_state(uid: int) -> None:
         _save_state(state)
         user_state.clear()      # hapus kunti lama agar sinkron dengan disk
         user_state.update(state)
+
+
+def drop_state(uid: int, *keys: str) -> None:
+    """Hapus kunci tertentu saja (state lain seperti settings selamat)."""
+    with _locked():
+        state = _load_state()
+        if uid in state:
+            for k in keys:
+                state[uid].pop(k, None)
+            _save_state(state)
+        user_state.update(state)
