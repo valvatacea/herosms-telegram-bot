@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 
@@ -170,6 +170,15 @@ def prices_msg(data: Dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _fmt_dt(iso: str) -> str:
+    """ISO 8601 UTC → 'd bulan jam:menit WIB' (+7)."""
+    try:
+        dt = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+        return (dt + timedelta(hours=7)).strftime("%d %b %Y %H:%M WIB")
+    except ValueError:
+        return str(iso)
+
+
 def activation_detail(act: Dict) -> str:
     lines = [
         f"{header('📋 Detail Aktivasi', f'ID: {code(str(act.get("id","-")))}')}",
@@ -179,11 +188,13 @@ def activation_detail(act: Dict) -> str:
         f"{bold('Layanan:')} {esc(str(act.get('serviceName', act.get('service','-'))))}",
         f"{bold('Negara:')} {esc(str(act.get('countryName', act.get('country','-'))))}",
         f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
-        f"{bold('Dibuat:')} {code(str(act.get('createDate', act.get('createdAt','-'))))}",
     ]
     more = act.get("moreCodes")
     if more:
         lines.append(f"{bold('Kode terima:')} {esc(str(more))}")
+    exp = act.get("expiredAt")
+    if exp and str(exp) not in ("-", ""):
+        lines.append(f"{bold('Kedaluwarsa:')} {code(_fmt_dt(exp))}")
     return "\n".join(lines) + "\n"
 
 
