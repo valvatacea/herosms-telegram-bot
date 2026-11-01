@@ -618,7 +618,7 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
         lines.append(f"Layanan: {p_sname} \\| Negara: {p_cname}")
         lines.append("")
         for price, count in entries:
-            lines.append(f"• {_fmt_price(price, uid)} — stok {code(count)}")
+            lines.append(f"• {_price_disp(price, uid)} — stok {code(count)}")
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
         kb.add(*[telebot.types.InlineKeyboardButton(_idr_label(price, uid), callback_data=f"buy:price:{price}") for price, _ in entries])
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Batal", callback_data="menu:buy_activation"))
@@ -641,7 +641,7 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: Callba
     _edit(
         chat,
         msg_id,
-        buy_confirm_msg(cname, sname, price, "", duration, _fmt_price(price, uid)),
+        buy_confirm_msg(cname, sname, price, "", duration, _price_disp(price, uid)),
         buy_confirm_keyboard(country, service),
     )
     _answer(call, "Konfirmasi pembelian")
