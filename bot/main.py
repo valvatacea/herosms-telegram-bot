@@ -28,6 +28,7 @@ from bot.keyboards import (
 )
 from bot.messages import (
     esc,
+    code,
     balance_msg,
     stats_msg,
     countries_msg,
@@ -253,7 +254,11 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data.startswith("buy:service:"):
             service = data.split(":", 2)[2]
-            _show_buy_confirm(chat, msg_id, uid, service, call)
+            _show_buy_prices(chat, msg_id, uid, service, call)
+
+        elif data.startswith("buy:price:"):
+            price = data.split(":", 2)[2]
+            _show_buy_confirm(chat, msg_id, uid, price, call)
 
         elif data.startswith("buy:confirm:"):
             parts = data.split(":", 3)
@@ -451,16 +456,44 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
         _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
 
-def _show_buy_confirm(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
+def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
+    """Skema beli baru: negara → layanan → daftar harga → konfirmasi."""
     country = get_state(uid, "buy_country") or "-"
-    price, currency = api.lookup_price(country, service)
     set_state(uid, "buy_service", service)
+    try:
+        data = api.offers("sms", services=service, countries=str(country))
+        node = (
+            data.get("data", {}).get(service, {}).get(str(country), {})
+            if isinstance(data, dict) else {}
+        )
+        entries = sorted(node.get("map", {}).items(), key=lambda kv: float(kv[0]))[:10]
+        if not entries:
+            _edit(chat, msg_id, error_msg("Stok Kosong", f"Tidak ada nomor untuk layanan {service} negara {country}"), back_menu())
+            _answer(call, "Stok kosong", alert=True)
+            return
+        lines = [f"🔹 *Pilih Harga OTP*", ""]
+        lines.append(f"Layanan: {code(service)} | Negara: {code(country)}")
+        lines.append("")
+        for price, count in entries:
+            lines.append(f"• {code(price)} — stok {code(count)}")
+        kb = telebot.types.InlineKeyboardMarkup(row_width=2)
+        kb.add(*[telebot.types.InlineKeyboardButton(f"💵 {price}", callback_data=f"buy:price:{price}") for price, _ in entries])
+        kb.add(telebot.types.InlineKeyboardButton("⬅️ Batal", callback_data="menu:buy_activation"))
+        _edit(chat, msg_id, "\n".join(lines), kb)
+        _answer(call, "Pilih harga")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Muat Harga", str(exc)), back_menu())
+        _answer(call, _alert("Error", exc), alert=True)
+
+
+def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: CallbackQuery) -> None:
+    country = get_state(uid, "buy_country") or "-"
+    service = get_state(uid, "buy_service") or "-"
     set_state(uid, "buy_price", price)
-    set_state(uid, "buy_currency", currency)
     _edit(
         chat,
         msg_id,
-        buy_confirm_msg(country, service, price, currency),
+        buy_confirm_msg(country, service, price, ""),
         buy_confirm_keyboard(country, service),
     )
     _answer(call, "Konfirmasi pembelian")
@@ -470,7 +503,14 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
     if country is None:
         country = get_state(uid, "buy_country")
     try:
-        act = api.buy_activation(service=service, country=country)
+        sprice = get_state(uid, "buy_price")
+        mp = float(sprice) if sprice else None
+        act = api.buy_activation(
+            service=service,
+            country=country,
+            max_price=mp,
+            fixed_price=mp is not None,
+        )
         # Rekam transaksi
         price = get_state(uid, "buy_price", "-")
         currency = get_state(uid, "buy_currency", "")

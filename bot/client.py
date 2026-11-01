@@ -119,11 +119,17 @@ class HeroSMS:
         country: Optional[str] = None,
         operator: Optional[str] = None,
         verification_type: Optional[str] = None,
+        amount: int = 1,
+        max_price: Optional[float] = None,
+        fixed_price: Optional[bool] = None,
     ) -> Dict:
-        json_body: Dict[str, Any] = {"service": service}
-        if country: json_body["country"] = country
+        json_body: Dict[str, Any] = {"service": service, "amount": amount}
+        if country:
+            json_body["country"] = int(country) if str(country).isdigit() else country
         if operator: json_body["operator"] = operator
         if verification_type: json_body["verificationType"] = verification_type
+        if max_price is not None: json_body["maxPrice"] = max_price
+        if fixed_price is not None: json_body["fixedPrice"] = fixed_price
         return self._post("/activations", json=json_body)
 
     def cancel_activation(self, activation_id: str) -> Dict:
@@ -237,8 +243,11 @@ class HeroSMS:
     def deliverability_stats(self) -> Dict:
         return self._get("/stats/deliverability")
 
-    def offers(self, verification_type: str) -> Dict:
-        return self._get(f"/activations/offers/{verification_type}")
+    def offers(self, verification_type: str, services: Optional[str] = None, countries: Optional[str] = None) -> Dict:
+        params: Dict[str, Any] = {}
+        if services: params["services"] = services
+        if countries: params["countries"] = countries
+        return self._get(f"/activations/offers/{verification_type}", params or None)
 
     def get_balance(self) -> Dict:
         """Saldo via legacy getBalance ( respons 'ACCESS_BALANCE:0.8234' )."""
