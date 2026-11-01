@@ -52,14 +52,6 @@ from bot.state import user_state, set_state, get_state, clear_state
 
 # ── Helper halaman state ──────────────────────────────────────────
 
-def _get_page(uid: int, list_name: str, aid: str | None = None) -> int:
-    pages = get_state(uid, "pages", {}) or {}
-    if aid:
-        otp_pages = pages.get("otp", {}) or {}
-        return int(otp_pages.get(aid, 1))
-    return int(pages.get(list_name, 1))
-
-
 def _set_page(uid: int, list_name: str, page: int, aid: str | None = None) -> None:
     pages = get_state(uid, "pages", {}) or {}
     if aid:
@@ -466,6 +458,54 @@ def on_callback(call: CallbackQuery) -> None:
             aid = data.split(":", 2)[2]
             _do_reactivate(chat, msg_id, aid, call)
 
+        # Kunci respons = kode (6/go) -> ubah ke nama (Indonesia/Telegram)
+        if isinstance(data, dict) and isinstance(data.get("data"), dict):
+            data = {"data": {
+                _country_name(c): {
+                    _service_name(s): v for s, v in sv.items()
+                }
+                for c, sv in data["data"].items()
+                if isinstance(sv, dict)
+            }}
+        _edit(chat, msg_id, stats_msg(data), back_menu())
+        _answer(call, "Statistik dimuat")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Cek Statistik", str(exc)), back_menu())
+        _answer(call, _alert("Error", exc), alert=True)
+
+
+def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    try:
+        uid = call.from_user.id
+        data = api.get_balance()
+        bal = str(data.get("balance", "-"))
+        _edit(chat, msg_id, balance_msg(data, _price_disp(bal, uid)), back_menu())
+        _answer(call, "Saldo dimuat")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
+        _answer(call, _alert("Error", exc), alert=True)
+
+
+def _show_settings(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
+    lang = get_state(uid, "settings_lang") or "id"
+    cur = get_state(uid, "settings_currency") or "usd"
+    ac = str(get_state(uid, "settings_autocancel") or "off")
+    lang_name = "Indonesia" if lang == "id" else "English"
+    ac_name = "Nonaktif" if ac == "off" else f"{ac} menit"
+    text = (
+        "🔹 *Pengaturan*\n\n"
+        f"Bahasa: {esc(lang_name)}\n"
+        f"Mata uang tampilan: {code(cur.upper())}\n"
+        f"Auto\\-batal tanpa OTP: {esc(ac_name)}\n"
+        "Harga HeroSMS selalu USD, mode IDR menampilkan konversi kurs"
+    )
+    _edit(chat, msg_id, text, settings_menu(lang, cur, ac))
+    _answer(call, "Pengaturan")
+
+
+def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    try:
+        data = api.user_stats()
         # Kunci respons = kode (6/go) -> ubah ke nama (Indonesia/Telegram)
         if isinstance(data, dict) and isinstance(data.get("data"), dict):
             data = {"data": {
