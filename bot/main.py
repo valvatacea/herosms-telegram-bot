@@ -381,21 +381,56 @@ def _show_services_for_buy(chat: int, msg_id: int, uid: int, country: str, call:
 
 
 def _lookup_price(country: str, service: str) -> tuple[str, str]:
-    """Coba ambil harga dari legacy getPrices. Kembalikan (price, currency)."""
+    """Coba ambil harga dari legacy getPrices. Kembalikan (price, currency).
+    
+    Coba beberapa bentuk respons yang mungkin sebelum gagarkan '-'."""
     try:
         data = api.legacy("getPrices")
-        if isinstance(data, dict):
-            # Format yang mungkin: {service: {country: price}} atau {data: [...]}
-            for key, val in data.items():
-                if key == "data" and isinstance(val, list):
-                    for item in val:
-                        if isinstance(item, dict):
-                            if str(item.get("service", "")) == service and str(item.get("country", "")) == country:
-                                return str(item.get("price", "-")), str(item.get("currency", ""))
-                elif key == service and isinstance(val, dict):
-                    for c, p in val.items():
-                        if c.lower() == country.lower():
-                            return str(p), ""
+        if not isinstance(data, dict):
+            return "-", ""
+
+        country_l = country.lower()
+        service_l = service.lower()
+
+        # Format 1: {data: [{service, country, price, currency}, ...]}
+        if isinstance(data.get("data"), list):
+            for item in data["data"]:
+                if not isinstance(item, dict):
+                    continue
+                if (str(item.get("service", "")).lower() == service_l
+                        and str(item.get("country", "")).lower() == country_l):
+                    return str(item.get("price", "-")), str(item.get("currency", ""))
+
+        # Helper: cocokkan key dalam nested dict
+        def _match_nested(outer):
+            for k, v in outer.items():
+                if not isinstance(v, dict):
+                    continue
+                if str(k).lower() == service_l:
+                    for ck, cv in v.items():
+                        if str(ck).lower() == country_l:
+                            return _extract_price(cv)
+                if str(k).lower() == country_l:
+                    for sk, sv in v.items():
+                        if str(sk).lower() == service_l:
+                            return _extract_price(sv)
+            return None
+
+        def _extract_price(val):
+            if isinstance(val, dict):
+                return str(val.get("price", "-")), str(val.get("currency", ""))
+            return str(val), ""
+
+        # Format 2: {service: {country: price}} / {country: {service: price}}
+        result = _match_nested(data)
+        if result:
+            return result
+
+        # Format 3: flat {service_country: price}
+        for k, v in data.items():
+            if f"{service}_{country}".lower() == str(k).lower():
+                return str(v), ""
+
     except Exception:  # noqa: BLE001
         pass
     return "-", ""
