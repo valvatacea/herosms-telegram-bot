@@ -1,6 +1,6 @@
 # Python-Telegram-Bot wrapper for HeroSMS API
 # See https://hero-sms.com and the OpenAPI spec (api-en.json)
 
-telebot==4.14.0
+pyTelegramBotAPI==4.14.0
 requests==2.32.3
 python-dotenv==1.0.0
