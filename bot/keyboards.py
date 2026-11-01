@@ -10,9 +10,6 @@ def main_menu() -> InlineKeyboardMarkup:
     kb.add(
         InlineKeyboardButton("💰 Saldo", callback_data="menu:balance"),
         InlineKeyboardButton("📊 Statistik", callback_data="menu:stats"),
-        InlineKeyboardButton("🌍 Negara", callback_data="menu:countries"),
-        InlineKeyboardButton("📱 Layanan", callback_data="menu:services"),
-        InlineKeyboardButton("💵 Harga", callback_data="menu:prices"),
         InlineKeyboardButton("🛒 Beli Nomor", callback_data="menu:buy_activation"),
         InlineKeyboardButton("📬 Email", callback_data="menu:email"),
         InlineKeyboardButton("📋 Aktif", callback_data="menu:active"),
