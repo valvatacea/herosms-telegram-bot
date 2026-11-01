@@ -103,7 +103,8 @@ def _get_watch(uid: int) -> dict:
 
 
 def _is_watching(uid: int, aid: str) -> bool:
-    return (_get_watch(uid) or {}).get(aid) not in (None, "off")
+    watch = _get_watch(uid) or {}
+    return aid in watch and watch.get(aid) != "off"
 
 
 def _watch_toggle(uid: int, aid: str) -> bool:
@@ -1067,7 +1068,7 @@ def _start_otp_poller(bot, interval: int = 30):
                                 log.debug(f"OTP baru aid={aid} uid={uid}")
                                 bot.send_message(
                                     uid,
-                                    f"🔔 *OTP Baru untuk Aktivasi {aid}*\n\nKode: *{latest_text}*",
+                                    f"🔔 *OTP Baru untuk Aktivasi {aid}*\n\nKode: *{esc(latest_text)}*",
                                     parse_mode="MarkdownV2",
                                 )
                         except HeroSMSError:
