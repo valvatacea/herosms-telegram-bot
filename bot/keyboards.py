@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from bot.messages import flag
+
 
 def main_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
@@ -97,8 +99,7 @@ def buy_countries_keyboard(items):
         else:
             name = str(item)
             cid = str(item)
-        is_id = str(cid) == "6" or str(cid).lower() in {"id", "indonesia"}
-        label = f"🇮🇩 {name}" if is_id else f"🌍 {name}"
+        label = f"{flag(name)} {name}"
         buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}:{str(name)[:30]}"))
     kb.add(*buttons)
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))

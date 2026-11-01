@@ -22,6 +22,53 @@ def code(text: str) -> str:
     return f"`{esc(text)}`"
 
 
+_FLAG_ALIAS = {
+    "russia": "Russian Federation",
+    "usa": "United States",
+    "united states of america": "United States",
+    "uk": "United Kingdom",
+    "england": "United Kingdom",
+    "south korea": "Korea, Republic of",
+    "north korea": "Korea, Democratic People's Republic of",
+    "vietnam": "Viet Nam",
+    "turkey": "Türkiye",
+    "iran": "Iran, Islamic Republic of",
+    "syria": "Syrian Arab Republic",
+    "laos": "Lao People's Democratic Republic",
+    "moldova": "Moldova, Republic of",
+    "tanzania": "Tanzania, United Republic of",
+    "venezuela": "Venezuela, Bolivarian Republic of",
+    "bolivia": "Bolivia, Plurinational State of",
+    "taiwan": "Taiwan, Province of China",
+    "palestine": "Palestine, State of",
+    "dr congo": "Congo, The Democratic Republic of the",
+    "ivory coast": "Côte d'Ivoire",
+    "czech": "Czechia",
+    "papua": "Papua New Guinea",
+    "uae": "United Arab Emirates",
+    "salvador": "El Salvador",
+    "swaziland": "Eswatini",
+    "bosnia": "Bosnia and Herzegovina",
+    "brunei": "Brunei Darussalam",
+    "reunion": "Réunion",
+    "cape verde": "Cabo Verde",
+    "kosovo": "FLAG:🇽🇰",
+}
+
+
+def flag(name: str) -> str:
+    """Emoji bendera dari nama negara (fallback 🌍)."""
+    try:
+        import pycountry
+        query = _FLAG_ALIAS.get(str(name).strip().lower(), str(name))
+        if query.startswith("FLAG:"):
+            return query[5:]
+        c = pycountry.countries.lookup(query)
+        return "".join(chr(0x1F1E6 + ord(ch) - 65) for ch in c.alpha_2)
+    except Exception:
+        return "🌍"
+
+
 def header(title: str, subtitle: str = "") -> str:
     lines = [f"🔹 *{esc(title)}*"]
     if subtitle:
@@ -59,7 +106,7 @@ def countries_msg(data: Dict) -> str:
         if isinstance(item, dict):
             name = item.get("eng", item.get("name", "-"))
             code_ = item.get("code", item.get("id", "-"))
-            lines.append(f"🇮🇩 {esc(name)} — {code(code_)}")
+            lines.append(f"{flag(name)} {esc(name)} — {code(code_)}")
         else:
             lines.append(f"• {esc(str(item))}")
     if len(items) > 30:
