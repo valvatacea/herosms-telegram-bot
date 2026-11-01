@@ -458,20 +458,16 @@ def on_callback(call: CallbackQuery) -> None:
             aid = data.split(":", 2)[2]
             _do_reactivate(chat, msg_id, aid, call)
 
-        # Kunci respons = kode (6/go) -> ubah ke nama (Indonesia/Telegram)
-        if isinstance(data, dict) and isinstance(data.get("data"), dict):
-            data = {"data": {
-                _country_name(c): {
-                    _service_name(s): v for s, v in sv.items()
-                }
-                for c, sv in data["data"].items()
-                if isinstance(sv, dict)
-            }}
-        _edit(chat, msg_id, stats_msg(data), back_menu())
-        _answer(call, "Statistik dimuat")
+        else:
+            _answer(call, "Tombol tidak dikenal.", alert=True)
+
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Cek Statistik", str(exc)), back_menu())
+        _edit(chat, msg_id, error_msg("Permintaan Gagal", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
+    except Exception as exc:  # noqa: BLE001
+        log.exception("callback error")
+        _edit(chat, msg_id, error_msg("Error Tak Terduga", str(exc)), back_menu())
+        _answer(call, _alert("Error tak terduga", exc), alert=True)
 
 
 def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
