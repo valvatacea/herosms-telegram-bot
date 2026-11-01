@@ -1,7 +1,7 @@
 # Evaluasi HeroSMS Telegram Bot
 
 Tanggal evaluasi: 2026-11-01 (UTC)
-Versi: commit `(belum di-commit)`
+Versi: commit `8346871`
 
 ## 1. Rekapitulasi semua fitur yang sudah selesai
 
@@ -94,7 +94,7 @@ python3 -m tests.test_herosms
 
 - GitHub: https://github.com/valvatacea/herosms-telegram-bot
 - Branch: `master`
-- Commit terbaru: `(belum di-commit)`
+- Commit terbaru: `8346871`
 
 ## 9. Kesimpulan
 
