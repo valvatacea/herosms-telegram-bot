@@ -17,6 +17,7 @@ def main_menu() -> InlineKeyboardMarkup:
         InlineKeyboardButton("📬 Email", callback_data="menu:email"),
         InlineKeyboardButton("📋 Aktif", callback_data="menu:active"),
         InlineKeyboardButton("📜 Riwayat", callback_data="menu:history"),
+        InlineKeyboardButton("💰 Riwayat Transaksi", callback_data="menu:transactions"),
     )
     kb.add(InlineKeyboardButton("❌ Tutup", callback_data="menu:close"))
     return kb

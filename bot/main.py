@@ -5,10 +5,11 @@ pesan error ramah, dan navigasi yang konsisten."""
 from __future__ import annotations
 
 import logging
+import time
 from typing import Dict
 
 import telebot
-from telebot.types import Message, CallbackQuery
+from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from bot.config import BOT_TOKEN, HEROSMS_API_KEY, HEROSMS_BASE_URL
 from bot.client import HeroSMS, HeroSMSError
@@ -207,6 +208,9 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data == "menu:history":
             _show_history(chat, msg_id, call, page=1)
+
+        elif data == "menu:transactions":
+            _show_transactions(chat, msg_id, call)
 
         elif data.startswith("buy:country:"):
             country = data.split(":", 2)[2]
@@ -466,6 +470,8 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, service: str, call: Call
     country = get_state(uid, "buy_country") or "-"
     price, currency = _lookup_price(country, service)
     set_state(uid, "buy_service", service)
+    set_state(uid, "buy_price", price)
+    set_state(uid, "buy_currency", currency)
     _edit(
         chat,
         msg_id,
@@ -480,6 +486,20 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         country = get_state(uid, "buy_country")
     try:
         act = api.buy_activation(service=service, country=country)
+        # Rekam transaksi
+        price = get_state(uid, "buy_price", "-")
+        currency = get_state(uid, "buy_currency", "")
+        pur = {
+            "service": service,
+            "country": country or "-",
+            "price": price,
+            "currency": currency,
+            "activation_id": str(act.get("id", "")),
+            "time": time.strftime("%Y-%m-%d %H:%M"),
+        }
+        pops = get_state(uid, "purchases", []) or []
+        pops.append(pur)
+        set_state(uid, "purchases", pops)
         clear_state(uid)
         if call:
             _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", "")), watching=False))
@@ -740,7 +760,31 @@ def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) ->
         _answer(call, str(exc), alert=True)
 
 
-def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
+    uid = call.from_user.id
+    purchases = get_state(uid, "purchases", []) or []
+    if not purchases:
+        txt = "💰 *Riwayat Transaksi*\n\nBelum ada pembelian."
+        _edit(chat, msg_id, txt, back_menu())
+        _answer(call, "Belum ada transaksi")
+        return
+
+    total = 0.0
+    lines = ["💰 *Riwayat Transaksi*\n"]
+    for p in reversed(purchases[-20:]):
+        try:
+            total += float(str(p.get("price", "0")).replace(",", "."))
+        except (ValueError, TypeError):
+            pass
+        lines.append(
+            f"• {p.get('time', '-')} | {p.get('service', '-')}"
+            f" | {p.get('country', '-')} | {p.get('price', '-')} {p.get('currency', '')}"
+        )
+    lines.append(f"\n*Total:* {total:g}")
+    kb = InlineKeyboardMarkup(row_width=1)
+    kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
+    _edit(chat, msg_id, "\n".join(lines), kb)
+    _answer(call, "Riwayat transaksi")
     try:
         # coba ambil dari daftar aktif dulu
         data = api.active_activations()
