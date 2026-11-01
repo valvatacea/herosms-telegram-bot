@@ -71,8 +71,12 @@ def buy_countries_keyboard(items):
     ordered = _popular_first(items, POPULAR_COUNTRY_IDS)
     buttons = []
     for item in ordered[:20]:
-        name = item.get("name", "-")
-        cid = item.get("id", item.get("code", "-"))
+        if isinstance(item, dict):
+            name = item.get("name", "-")
+            cid = item.get("id", item.get("code", "-"))
+        else:
+            name = str(item)
+            cid = str(item)
         is_id = str(cid).lower() in {"id", "indonesia"}
         label = f"🇮🇩 {name}" if is_id else f"🌍 {name}"
         buttons.append(InlineKeyboardButton(label, callback_data=f"buy:country:{cid}"))
@@ -86,8 +90,12 @@ def buy_services_keyboard(items):
     ordered = _popular_first(items, POPULAR_SERVICE_IDS)
     buttons = []
     for item in ordered[:25]:
-        name = item.get("name", "-")
-        sid = item.get("id", item.get("code", "-"))
+        if isinstance(item, dict):
+            name = item.get("name", "-")
+            sid = item.get("id", item.get("code", "-"))
+        else:
+            name = str(item)
+            sid = str(item)
         buttons.append(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}"))
     kb.add(*buttons)
     kb.add(InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))
