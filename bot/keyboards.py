@@ -34,6 +34,7 @@ def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyb
     kb.add(
         InlineKeyboardButton("📨 OTP Terakhir", callback_data=f"otp:last:{activation_id}"),
         InlineKeyboardButton("📋 Semua OTP", callback_data=f"otp:list:{activation_id}"),
+        InlineKeyboardButton("🔄 Kirim Ulang SMS", callback_data=f"act:resend:{activation_id}"),
         InlineKeyboardButton("🔔 Pantau OTP" if not watching else "🔕 Berhenti Pantau", callback_data=f"otp:watch:{activation_id}"),
         # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),

@@ -262,6 +262,10 @@ def on_callback(call: CallbackQuery) -> None:
             aid = data.split(":", 2)[2]
             _show_activation_detail(chat, msg_id, aid, call)
 
+        elif data.startswith("act:resend:"):
+            aid = data.split(":", 2)[2]
+            _show_confirm_resend(chat, msg_id, aid, call)
+
         # Konfirmasi sebelum aksi destructive
         elif data.startswith("act:confirm:finish:"):
             aid = data.split(":", 3)[3]
@@ -279,6 +283,10 @@ def on_callback(call: CallbackQuery) -> None:
         elif data.startswith("confirm:cancel:"):
             aid = data.split(":", 2)[2]
             _do_cancel(chat, msg_id, aid, call)
+
+        elif data.startswith("confirm:resend:"):
+            aid = data.split(":", 2)[2]
+            _do_resend(chat, msg_id, aid, call)
 
         elif data.startswith("act:reactivate:"):
             aid = data.split(":", 2)[2]
@@ -554,7 +562,29 @@ def _do_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
         _edit(chat, msg_id, success_msg("Aktivasi Dibatalkan", f"Aktivasi ID {aid} telah dibatalkan."), back_menu())
         _answer(call, "Dibatalkan")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
+        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
+        _answer(call, str(exc), alert=True)
+
+
+# ── Konfirmasi & eksekusi resend SMS ──────────────────────────────
+
+def _show_confirm_resend(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    _edit(
+        chat,
+        msg_id,
+        confirm_msg("Kirim Ulang SMS", f"Aktivasi ID {aid} akan meminta pengiriman ulang SMS.\nBiaya mungkin dikenakan sesuai ketentuan layanan."),
+        confirm_keyboard("resend", aid),
+    )
+    _answer(call, "Konfirmasi kirim ulang SMS")
+
+
+def _do_resend(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    try:
+        api.resend_sms(aid)
+        _edit(chat, msg_id, success_msg("SMS Dikirim Ulang", f"Aktivasi ID {aid}: permintaan resend SMS telah dikirim."), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
+        _answer(call, "SMS dikirim ulang")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Kirim Ulang", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, str(exc), alert=True)
 
 

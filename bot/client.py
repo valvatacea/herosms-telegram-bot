@@ -152,6 +152,10 @@ class HeroSMS:
     def prolong_history(self, activation_id: str) -> Dict:
         return self._get(f"/activations/{activation_id}/prolong/history")
 
+    def resend_sms(self, activation_id: str) -> Dict:
+        """Minta pengiriman ulang SMS (status 3 = request resending of SMS)."""
+        return self.legacy("setStatus", {"id": activation_id, "status": 3})
+
     def otp_last(self, activation_id: str) -> Dict:
         return self._get(f"/activations/{activation_id}/otp/last")
 

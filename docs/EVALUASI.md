@@ -1,7 +1,7 @@
 # Evaluasi HeroSMS Telegram Bot
 
 Tanggal evaluasi: 2026-11-01 (UTC)
-Versi: commit `f993eb9`
+Versi: commit `fe79c79`
 
 ## 1. Rekapitulasi semua fitur yang sudah selesai
 
@@ -16,7 +16,8 @@ Versi: commit `f993eb9`
 | 📨 OTP | OTP terakhir dan daftar OTP per aktivasi | ✅ Selesai |
 | ✅ Selesai | Tandai aktivasi selesai (dikorekansi dulu) | ✅ Selesai |
 | ❌ Batalkan | Batalkan aktivasi & saldo dikembalikan (dikorekansi dulu) | ✅ Selesai |
-| 🔄 Reaktivasi | Reaktivasi aktivasi yang selesai | ✅ Selesai |
+|| 🔄 Reaktivasi | Reaktivasi aktivasi yang selesai | ✅ Selesai ||
+| 🔄 Kirim Ulang SMS | Minta pengiriman ulang SMS via `setStatus` status 3, konfirmasi dulu | ✅ Selesai ||
 | ⏳ Perpanjang | Perpanjang masa aktif aktivasi | ✅ Selesai |
 | 📬 Email | Domain, offers, beli, detail, batal, pesan ulang | ✅ Selesai |
 | 📄 Pagination | Daftar aktivasi/riwayat/email/OTP dibagi halaman | ✅ Selesai |
@@ -28,7 +29,7 @@ Versi: commit `f993eb9`
 | 📦 Struktur | Paket `bot/`, tes di `tests/`, docs di `docs/` | ✅ Selesai |
 | 📄 Dokumentasi | README, API.md, DEPLOY.md, MENU.md, EVALUASI.md, CONTRIBUTING.md | ✅ Selesai |
 
-## 2. Perbaikan dari evaluasi saat ini (6 gap ditutup)
+## 2. Perbaikan dari evaluasi saat ini (gap ditutup)
 
 | No | Gap | Prioritas | Tindakan | Commit |
 |----|-----|-----------|----------|--------|
@@ -38,6 +39,7 @@ Versi: commit `f993eb9`
 | 4 | Tidak ada rate limiting / retry | Sedang | Retry exponential backoff (max 3x) pada 429/5xx di klien API | `d3f14ee` |
 | 5 | Tidak ada riwayat transaksi detail | Sedang | Rekam pembelian di state, menu Riwayat Transaksi + total | `72d6503` |
 | 6 | Tidak ada multi-bot / multi-account | Rendah | `HEROSMS_STATE_FILE` untuk state file terpisah per instance | `f993eb9` |
+| 7 | Tidak ada fitur resend SMS | Sedang | Tambah `resend_sms()` di klien API (`setStatus` status 3), tombol Konfirmasi Kirim Ulang di keyboard, handler `act:resend:` / `confirm:resend:` di router | (commit ini) |
 
 ## 3. Kekuatan bot saat ini
 
