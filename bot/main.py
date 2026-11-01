@@ -456,7 +456,12 @@ def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
     try:
         uid = call.from_user.id
         data = api.get_balance()
-        _edit(chat, msg_id, balance_msg(data, _fmt_price(data.get("balance", "-"), uid)), back_menu())
+        bal = str(data.get("balance", "-"))
+        if (get_state(uid, "settings_currency") or "usd") == "idr":
+            pstr = f"🇮🇩 {_fmt_price(bal, uid)}"
+        else:
+            pstr = f"💵 {code('$' + bal)}"
+        _edit(chat, msg_id, balance_msg(data, pstr), back_menu())
         _answer(call, "Saldo dimuat")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
