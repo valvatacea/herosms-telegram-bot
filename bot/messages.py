@@ -96,13 +96,13 @@ def stats_msg(data: Dict) -> str:
                     if isinstance(st, dict):
                         lines.append(
                             f"• {esc(str(country))}/{esc(str(service))}: "
-                            f"sukses {code(str(st.get('success','-')))} dari {code(str(st.get('count','-')))} "
-                            f"\\({code(str(st.get('percent','-')))}%\\)"
+                            f"sukses {esc(str(st.get('success','-')))} dari {esc(str(st.get('count','-')))} "
+                            f"\\({esc(str(st.get('percent','-')))}%\\)"
                         )
                     else:
-                        lines.append(f"• {esc(str(country))}/{esc(str(service))}: {code(str(st))}")
+                        lines.append(f"• {esc(str(country))}/{esc(str(service))}: {esc(str(st))}")
             else:
-                lines.append(f"• {esc(str(country))}: {code(str(services))}")
+                lines.append(f"• {esc(str(country))}: {esc(str(services))}")
     else:
         lines.append("Belum ada statistik aktivasi\\.")
     return "\n".join(lines) + "\n"
