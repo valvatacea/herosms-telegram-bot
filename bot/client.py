@@ -17,7 +17,7 @@ class HeroSMS:
         self.base_url = base_url.rstrip("/")
         self.legacy_base = self.base_url.replace("/api/v1", "")
         self.session = requests.Session()
-        self.session.headers.update({"Authorization": f"Bearer {api_key}"})
+        self.session.headers.update({"Authorization": f"ApiKey {api_key}"})
 
     def _get(self, path: str, params: Optional[Dict] = None) -> Any:
         return self._request_with_retry("GET", path, params=params)
