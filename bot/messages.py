@@ -1,4 +1,4 @@
-"""Format pesan agar rapi, ramah pengguna, dan mudah dibaca."""
+"""Format pesan agar rapi, ramah pengguna, dan mudah dibaca\\."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def countries_msg(data: Dict) -> str:
         items = [items]
     lines = [header("🌍 Daftar Negara", "Pilih negara untuk beli nomor")]
     if not items:
-        return lines[0] + "\nBelum ada data negara.\n"
+        return lines[0] + "\nBelum ada data negara\\.\n"
     for item in items[:30]:
         if isinstance(item, dict):
             name = item.get("name", "-")
@@ -58,7 +58,7 @@ def countries_msg(data: Dict) -> str:
         else:
             lines.append(f"• {esc(str(item))}")
     if len(items) > 30:
-        lines.append(f"\n_…dan {len(items) - 30} negara lainnya._")
+        lines.append(f"\n_…dan {len(items) - 30} negara lainnya\\._")
     return "\n".join(lines) + "\n"
 
 
@@ -68,7 +68,7 @@ def services_msg(data: Dict) -> str:
         items = [items]
     lines = [header("📱 Daftar Layanan", "Pilih layanan verifikasi")]
     if not items:
-        return lines[0] + "\nBelum ada data layanan.\n"
+        return lines[0] + "\nBelum ada data layanan\\.\n"
     for item in items[:40]:
         if isinstance(item, dict):
             name = item.get("name", "-")
@@ -77,7 +77,7 @@ def services_msg(data: Dict) -> str:
         else:
             lines.append(f"• {esc(str(item))}")
     if len(items) > 40:
-        lines.append(f"\n_…dan {len(items) - 40} layanan lainnya._")
+        lines.append(f"\n_…dan {len(items) - 40} layanan lainnya\\._")
     return "\n".join(lines) + "\n"
 
 
@@ -85,7 +85,7 @@ def prices_msg(data: Dict) -> str:
     lines = [header("💵 Harga Aktivasi", "Per layanan / negara")]
     if isinstance(data, dict):
         if not data:
-            return lines[0] + "\nBelum ada data harga.\n"
+            return lines[0] + "\nBelum ada data harga\\.\n"
         for key, val in data.items():
             lines.append(f"• {esc(str(key))}: {code(str(val))}")
     else:
@@ -114,7 +114,7 @@ def active_list_msg(data: Dict) -> str:
     items = data.get("data", []) if isinstance(data, dict) else []
     lines = [header("📋 Aktivasi Aktif", "Klik nomor untuk lihat detail & OTP")]
     if not items:
-        return lines[0] + "\nBelum ada aktivasi aktif. Beli nomor dulu di menu 🛒.\n"
+        return lines[0] + "\nBelum ada aktivasi aktif\\. Beli nomor dulu di menu 🛒\\.\n"
     for item in items[:15]:
         if isinstance(item, dict):
             aid = item.get("id", "-")
@@ -135,7 +135,7 @@ def history_msg(data: Dict) -> str:
     items = data.get("data", []) if isinstance(data, dict) else []
     lines = [header("📜 Riwayat Aktivasi", "Aktivasi yang sudah selesai")]
     if not items:
-        return lines[0] + "\nBelum ada riwayat aktivasi.\n"
+        return lines[0] + "\nBelum ada riwayat aktivasi\\.\n"
     for item in items[:15]:
         if isinstance(item, dict):
             aid = item.get("id", "-")
@@ -147,7 +147,7 @@ def history_msg(data: Dict) -> str:
                 f"• {code(str(aid))} | {code(str(phone))} | {esc(str(status))} | {code(str(cost))} | {code(str(date))}"
             )
     if len(items) > 15:
-        lines.append(f"\n_…dan {len(items) - 15} entri lain._")
+        lines.append(f"\n_…dan {len(items) - 15} entri lain\\._")
     return "\n".join(lines) + "\n"
 
 
@@ -161,7 +161,7 @@ def otp_msg(activation_id: str, data: Any) -> str:
             lines.append(f"{bold('Waktu:')} {code(str(date))}")
     elif isinstance(data, list):
         if not data:
-            lines.append("Belum ada kode OTP yang diterima.")
+            lines.append("Belum ada kode OTP yang diterima\\.")
         for i, item in enumerate(data[:10], 1):
             if isinstance(item, dict):
                 code_val = item.get("code", item.get("otp", "-"))
@@ -183,7 +183,7 @@ def purchase_success(act: Dict) -> str:
         f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
         f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
         f"{bold('Biaya:')} {code(str(act.get('cost','-')))} {code(str(act.get('currency','')))}",
-        f"\n👉 Klik tombol di bawah untuk ambil OTP atau selesaikan aktivasi.",
+        f"\n👉 Klik tombol di bawah untuk ambil OTP atau selesaikan aktivasi\\.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -191,7 +191,7 @@ def purchase_success(act: Dict) -> str:
 def welcome_msg() -> str:
     return (
         f"{header('🤖 HeroSMS Bot', 'Manajemen aktivasi SMS/OTP via Telegram')}\n"
-        "Selamat datang! Bot ini membantu Anda:\n"
+        "Selamat datang\\! Bot ini membantu Anda:\n"
         "• Cek saldo & statistik akun\n"
         "• Lihat negara, layanan, dan harga\n"
         "• Beli nomor verifikasi (SMS & email)\n"
@@ -205,7 +205,7 @@ def confirm_msg(action_label: str, detail: str) -> str:
     return (
         f"{header('⚠️ Konfirmasi', 'Tindakan tidak dapat dibatalkan')}\n"
         f"{bold('Aksi:')} {esc(action_label)}\n"
-        f"{bold('Detail:')} {detail}\n\n"
+        f"{bold('Detail:')} {esc(detail)}\n\n"
         "Lanjutkan?"
     )
 
@@ -222,7 +222,7 @@ def email_list_msg(data: Dict) -> str:
     items = data.get("data", []) if isinstance(data, dict) else []
     lines = [header("📬 Aktivasi Email Aktif", "Daftar pembelian email")]
     if not items:
-        return lines[0] + "\nBelum ada aktivasi email.\n"
+        return lines[0] + "\nBelum ada aktivasi email\\.\n"
     for item in items[:15]:
         if isinstance(item, dict):
             eid = item.get("id", "-")
@@ -230,7 +230,7 @@ def email_list_msg(data: Dict) -> str:
             status = item.get("status", "-")
             lines.append(f"• {code(str(eid))} | {esc(str(email))} | {esc(str(status))}")
     if len(items) > 15:
-        lines.append(f"\n_…dan {len(items) - 15} entri lain._")
+        lines.append(f"\n_…dan {len(items) - 15} entri lain\\._")
     return "\n".join(lines) + "\n"
 
 

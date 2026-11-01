@@ -189,7 +189,7 @@ def on_callback(call: CallbackQuery) -> None:
             _answer(call, "Menu utama")
 
         elif data == "menu:close":
-            bot.edit_message_text("Menu ditutup. Ketik /start untuk buka kembali.", chat, msg_id)
+            bot.edit_message_text("Menu ditutup\\. Ketik /start untuk buka kembali\\.", chat, msg_id)
             _answer(call, "Ditutup")
 
         elif data == "menu:balance":
