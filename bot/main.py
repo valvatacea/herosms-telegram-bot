@@ -498,15 +498,8 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: Callba
     cname = get_state(uid, "buy_country_name") or country
     sname = get_state(uid, "buy_service_name") or service
     set_state(uid, "buy_price", price)
-    duration = "-"
-    try:
-        cd = api.custom_durations()
-        node = cd.get("data", {}).get(service, {}) if isinstance(cd, dict) else {}
-        minutes = node.get(str(country)) or node.get("0")
-        if minutes:
-            duration = f"{minutes} menit"
-    except Exception:
-        pass
+    # Durasi default aktivasi OTP = 20 menit (custom-durations hanya untuk rent/produk kustom)
+    duration = "20 menit \\(default aktivasi\\)"
     set_state(uid, "buy_duration", duration)
     _edit(
         chat,

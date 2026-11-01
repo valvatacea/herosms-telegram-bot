@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Dict, List
 
 
@@ -192,12 +193,20 @@ def purchase_success(act: Dict) -> str:
         f"{header('✅ Nomor Dibeli', 'Aktivasi berhasil dibuat')}",
         f"{bold('ID:')} {code(str(act.get('id','-')))}",
         f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
-        f"{bold('Kode negara:')} {code(str(act.get('phoneCode','-')))}",
+        f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
         f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
         f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
-        f"{bold('Biaya:')} {code(str(act.get('cost','-')))} {code(str(act.get('currency','')))}",
-        f"\n👉 Klik tombol di bawah untuk ambil OTP atau selesaikan aktivasi\\.",
+        f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
     ]
+    try:
+        c, e = str(act.get("createdAt", "")), str(act.get("expiredAt", ""))
+        if c and e:
+            fmt = lambda s: datetime.fromisoformat(s.replace("Z", "+00:00"))
+            mins = int((fmt(e) - fmt(c)).total_seconds() // 60)
+            lines.append(f"{bold('Durasi:')} {code(f'{mins} menit')}")
+    except Exception:
+        pass
+    lines.append(f"\n👉 Klik tombol di bawah untuk ambil OTP atau selesaikan aktivasi\\.")
     return "\n".join(lines) + "\n"
 
 
