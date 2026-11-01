@@ -124,26 +124,22 @@ def _nav_row(kb, page, total, prefix):
         kb.add(*nav)
 
 
-def buy_countries_keyboard(items, page=1, per=20):
-    kb = InlineKeyboardMarkup(row_width=2)
+def buy_countries_keyboard(items, page=1, per=15):
+    kb = InlineKeyboardMarkup(row_width=3)
     chunk, page, total = _page_slice(order_countries(items), page, per)
-    for item in chunk:
-        name = item.get("eng", item.get("name", "-"))
-        cid = item.get("id", item.get("code", "-"))
-        kb.add(InlineKeyboardButton(f"{flag(name)} {name}", callback_data=f"buy:country:{cid}:{str(name)[:30]}"))
+    buttons = [InlineKeyboardButton(f"{item.get('eng', item.get('name', '-'))}", callback_data=f"buy:country:{item.get('id', item.get('code', '-'))}:{str(item.get('eng', item.get('name', '-')))[:30]}") for item in chunk]
+    kb.add(*buttons)
     _nav_row(kb, page, total, "buy:countries")
     kb.add(InlineKeyboardButton(f"🔍 Cari Negara ({page}/{total})", callback_data="buy:search:country"))
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
     return kb
 
 
-def buy_services_keyboard(items, page=1, per=25):
-    kb = InlineKeyboardMarkup(row_width=2)
+def buy_services_keyboard(items, page=1, per=15):
+    kb = InlineKeyboardMarkup(row_width=3)
     chunk, page, total = _page_slice(order_services(items), page, per)
-    for item in chunk:
-        name = item.get("name", "-")
-        sid = item.get("id", item.get("code", "-"))
-        kb.add(InlineKeyboardButton(f"📱 {name}", callback_data=f"buy:service:{sid}:{str(name)[:30]}"))
+    buttons = [InlineKeyboardButton(f"{item.get('name', '-')}", callback_data=f"buy:service:{item.get('id', item.get('code', '-'))}:{str(item.get('name', '-'))[:30]}") for item in chunk]
+    kb.add(*buttons)
     _nav_row(kb, page, total, "buy:services")
     kb.add(InlineKeyboardButton(f"🔍 Cari Layanan ({page}/{total})", callback_data="buy:search:service"))
     kb.add(InlineKeyboardButton("⬅️ Negara", callback_data="menu:buy_activation"))

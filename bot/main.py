@@ -606,7 +606,7 @@ def _show_countries_page(chat: int, msg_id: int, uid: int, page: int, call: Call
     try:
         data = api.legacy("getCountries")
         items = _legacy_items(data)
-        total = max(1, (len(items) + 19) // 20)
+        total = max(1, (len(items) + 14) // 15)
         page = min(max(1, page), total)
         _edit(chat, msg_id, "🔹 *Beli Nomor*\n\nPilih negara:", buy_countries_keyboard(items, page))
         _answer(call, f"Halaman {page}/{total}")
@@ -624,7 +624,7 @@ def _show_services_page(chat: int, msg_id: int, uid: int, page: int, call: Callb
     try:
         data = api.legacy("getServicesList")
         items = _legacy_items(data)
-        total = max(1, (len(items) + 24) // 25)
+        total = max(1, (len(items) + 14) // 15)
         page = min(max(1, page), total)
         cname = esc(get_state(uid, "buy_country_name") or country)
         _edit(
