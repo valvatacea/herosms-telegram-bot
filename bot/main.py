@@ -31,6 +31,7 @@ from bot.keyboards import (
 from bot.messages import (
     esc,
     code,
+    status_name,
     balance_msg,
     stats_msg,
     countries_msg,
@@ -1039,7 +1040,7 @@ def _show_history(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) ->
             if isinstance(item, dict):
                 aid = item.get("id", "-")
                 phone = item.get("phone", "-")
-                status = item.get("status", "-")
+                status = status_name(item.get("status", "-"))
                 kb.add(telebot.types.InlineKeyboardButton(
                     f"📜 {phone} (ID {aid}, {status})", callback_data=f"act:view:{aid}"))
         nav = pagination_keys(page, total, "history")

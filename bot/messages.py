@@ -170,6 +170,27 @@ def prices_msg(data: Dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+_STATUS_NAMES = {
+    1: "Siap",
+    2: "Kode diterima",
+    3: "Kirim ulang diminta",
+    4: "Menunggu OTP",
+    6: "Selesai",
+    8: "Dibatalkan",
+    10: "Dikembalikan",
+}
+
+
+def status_name(s) -> str:
+    """Kode status angka -> teks mudah dibaca."""
+    if s in (None, "", "-"):
+        return "-"
+    try:
+        return _STATUS_NAMES.get(int(s), str(s))
+    except (TypeError, ValueError):
+        return str(s)
+
+
 def _fmt_dt(iso: str) -> str:
     """ISO 8601 UTC → 'd bulan jam:menit WIB' (+7)."""
     try:
@@ -183,7 +204,7 @@ def activation_detail(act: Dict, price_str: str = "") -> str:
     cost_line = price_str or f"{code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}"
     lines = [
         f"{header('📋 Detail Aktivasi', f'ID: {code(str(act.get("id","-")))}')}",
-        f"{bold('Status:')} {esc(str(act.get('status','-')))}",
+        f"{bold('Status:')} {esc(status_name(act.get('status','-')))}",
         f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
         f"{bold('Layanan:')} {esc(str(act.get('serviceName', act.get('service','-'))))}",
@@ -208,10 +229,10 @@ def active_list_msg(data: Dict) -> str:
         if isinstance(item, dict):
             aid = item.get("id", "-")
             phone = item.get("phone", "-")
-            status = item.get("status", "-")
+            status = status_name(item.get("status", "-"))
             cost = item.get("cost", item.get("price", "-"))
             lines.append(
-                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {code(str(cost))}"
+                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {esc(str(cost))}"
             )
         else:
             lines.append(f"• {esc(str(item))}")
@@ -229,11 +250,11 @@ def history_msg(data: Dict) -> str:
         if isinstance(item, dict):
             aid = item.get("id", "-")
             phone = item.get("phone", "-")
-            status = item.get("status", "-")
+            status = status_name(item.get("status", "-"))
             cost = item.get("cost", "-")
             date = item.get("createDate", "-")
             lines.append(
-                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {code(str(cost))} \\| {code(str(date))}"
+                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {code(str(cost))} \\| {esc(str(date))}"
             )
     if len(items) > 15:
         lines.append(f"\n_…dan {len(items) - 15} entri lain\\._")
