@@ -178,7 +178,7 @@ def activation_detail(act: Dict) -> str:
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode','-')))}",
         f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
         f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
-        f"{bold('Biaya:')} {code(str(act.get('cost','-')))} {code(str(act.get('currency','')))}",
+        f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
         f"{bold('Dibuat:')} {code(str(act.get('createDate','-')))}",
     ]
     more = act.get("moreCodes")
@@ -197,12 +197,12 @@ def active_list_msg(data: Dict) -> str:
             aid = item.get("id", "-")
             phone = item.get("phone", "-")
             status = item.get("status", "-")
-            cost = item.get("cost", "-")
+            cost = item.get("cost", item.get("price", "-"))
             lines.append(
-                f"• {code(str(aid))} | {code(str(phone))} | {esc(str(status))} | {code(str(cost))}"
+                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {code(str(cost))}"
             )
-    else:
-        lines.extend(esc(str(x)) for x in items)
+        else:
+            lines.append(f"• {esc(str(item))}")
     if len(items) > 15:
         lines.append(f"\n_…dan {len(items) - 15} aktivasi lain._")
     return "\n".join(lines) + "\n"
@@ -221,7 +221,7 @@ def history_msg(data: Dict) -> str:
             cost = item.get("cost", "-")
             date = item.get("createDate", "-")
             lines.append(
-                f"• {code(str(aid))} | {code(str(phone))} | {esc(str(status))} | {code(str(cost))} | {code(str(date))}"
+                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {code(str(cost))} \\| {code(str(date))}"
             )
     if len(items) > 15:
         lines.append(f"\n_…dan {len(items) - 15} entri lain\\._")

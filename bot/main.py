@@ -613,6 +613,13 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
             fixed_price=mp is not None,
             verification_type="sms",
         )
+        # Respons POST dibungkus {"data": [ ... ]} — ambil isinya
+        if isinstance(act, dict):
+            inner = act.get("data")
+            if isinstance(inner, list) and inner:
+                act = inner[0]
+            elif isinstance(inner, dict) and inner:
+                act = inner
         # Rekam transaksi
         price = get_state(uid, "buy_price", "-")
         currency = get_state(uid, "buy_currency", "")
@@ -717,6 +724,39 @@ def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _answer(call, "Di-reaktivasi")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
+        _answer(call, _alert("Error", exc), alert=True)
+
+
+def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
+    try:
+        act: Dict = {}
+        try:
+            data = api.active_activations(search=str(aid), size=25)
+            items = data.get("data", []) if isinstance(data, dict) else []
+            if isinstance(items, list):
+                act = next((x for x in items if str(x.get("id", "")) == str(aid)), {})
+        except HeroSMSError:
+            pass
+        if not act:
+            try:
+                now = datetime.now(timezone.utc)
+                data = api.activation_history(
+                    from_=(now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    to=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    search=str(aid),
+                )
+                items = data.get("data", []) if isinstance(data, dict) else []
+                if isinstance(items, list) and items:
+                    act = next((x for x in items if str(x.get("id", "")) == str(aid)), items[0])
+            except HeroSMSError:
+                pass
+        if not act:
+            act = {"id": aid, "status": "-", "phone": "-"}
+        watch = _is_watching(call.from_user.id, str(aid))
+        _edit(chat, msg_id, activation_detail(act), activation_actions(str(aid), watching=watch))
+        _answer(call, "Detail aktivasi")
+    except HeroSMSError as exc:
+        _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
 
 
@@ -951,6 +991,7 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
     purchases = get_state(uid, "purchases", []) or []
     if not purchases:
         txt = "💰 *Riwayat Transaksi*\n\nBelum ada pembelian\\."
+        _edit(chat, msg_id, txt, back_menu())
         _answer(call, "Belum ada transaksi")
         return
 
@@ -978,11 +1019,11 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
             else:
                 cur_price, cur_cur = price_cache[key]
         line = (
-            f"• {p.get('time', '-')} | {service}"
-            f" | {country} | {hist_price} {hist_cur}"
+            f"• {esc(str(p.get('time', '-')))} \\| {esc(str(service))}"
+            f" \\| {esc(str(country))} \\| {code(str(hist_price))} {code(str(hist_cur))}"
         )
         if cur_price != hist_price:
-            line += f" (sekarang: {cur_price} {cur_cur})"
+            line += f" \\(sekarang: {code(str(cur_price))} {code(str(cur_cur))}\\)"
         lines.append(line)
     lines.append(f"\n*Total:* {esc(f'{total:g}')}")
     kb = InlineKeyboardMarkup(row_width=1)
