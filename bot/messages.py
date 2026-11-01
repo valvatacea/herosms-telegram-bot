@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 
@@ -192,12 +192,32 @@ def status_name(s) -> str:
 
 
 def _fmt_dt(iso: str) -> str:
-    """ISO 8601 UTC → 'd bulan jam:menit WIB' (+7)."""
+    """ISO 8601 UTC → 'd bulan jam:menit:detik WIB' (+7)."""
     try:
         dt = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
-        return (dt + timedelta(hours=7)).strftime("%d %b %Y %H:%M WIB")
+        return (dt + timedelta(hours=7)).strftime("%d %b %Y %H:%M:%S WIB")
     except ValueError:
         return str(iso)
+
+
+def _remaining_bar(act: Dict) -> str:
+    """Bar sisa durasi (snapshot saat render): 🟩🟩…⬜ + sisa mm:ss."""
+    try:
+        c = datetime.fromisoformat(str(act.get("createdAt", "")).replace("Z", "+00:00"))
+        e = datetime.fromisoformat(str(act.get("expiredAt", "")).replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        if not c or not e or e <= now:
+            return "" if not e else "⌛ Kedaluwarsa"
+        total = (e - c).total_seconds()
+        if total <= 0:
+            return ""
+        left = (e - now).total_seconds()
+        frac = max(0.0, min(1.0, left / total))
+        filled = round(frac * 10)
+        bar = "🟩" * filled + "⬜" * (10 - filled)
+        return f"{bar} sisa {int(left // 60):02d}:{int(left % 60):02d}"
+    except Exception:
+        return ""
 
 
 def activation_detail(act: Dict, price_str: str = "") -> str:
@@ -217,6 +237,9 @@ def activation_detail(act: Dict, price_str: str = "") -> str:
     exp = act.get("expiredAt")
     if exp and str(exp) not in ("-", ""):
         lines.append(f"{bold('Kedaluwarsa:')} {code(_fmt_dt(exp))}")
+        bar = _remaining_bar(act)
+        if bar:
+            lines.append(bar)
     return "\n".join(lines) + "\n"
 
 
@@ -298,6 +321,9 @@ def purchase_success(act: Dict, price_str: str = "") -> str:
     exp = act.get("expiredAt")
     if exp and str(exp) not in ("-", ""):
         lines.append(f"{bold('Kedaluwarsa:')} {code(_fmt_dt(exp))}")
+        bar = _remaining_bar(act)
+        if bar:
+            lines.append(bar)
     lines.append(f"\n👉 Klik tombol di bawah untuk ambil OTP atau selesaikan aktivasi\\.")
     return "\n".join(lines) + "\n"
 
