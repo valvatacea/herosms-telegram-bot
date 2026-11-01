@@ -521,6 +521,7 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
             country=country,
             max_price=mp,
             fixed_price=mp is not None,
+            verification_type="sms",
         )
         # Rekam transaksi
         price = get_state(uid, "buy_price", "-")

@@ -190,7 +190,7 @@ def otp_msg(activation_id: str, data: Any) -> str:
 
 def purchase_success(act: Dict) -> str:
     lines = [
-        f"{header('✅ Nomor Dibeli', 'Aktivasi berhasil dibuat')}",
+        f"{header('✅ Nomor Dibeli', 'Aktivasi OTP SMS berhasil dibuat')}",
         f"{bold('ID:')} {code(str(act.get('id','-')))}",
         f"{bold('Nomor:')} {code(str(act.get('phone','-')))}",
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",

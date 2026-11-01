@@ -230,11 +230,6 @@ class HeroSMS:
         if to: params["to"] = to
         return self._get(f"/activations/{activation_id}/otp", params)
 
-    # ── Classifiers ──────────────────────────────────────────────
-
-    def custom_durations(self) -> Dict:
-        return self._get("/classifiers/activations/custom-durations")
-
     # ── Stats ────────────────────────────────────────────────────
 
     def user_stats(self) -> Dict:
