@@ -7,3 +7,4 @@ venv/
 user_state.json
 bot/__pycache__/
 tests/__pycache__/
+bot.log
