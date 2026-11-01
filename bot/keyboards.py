@@ -125,7 +125,7 @@ def _nav_row(kb, page, total, prefix):
 
 
 def buy_countries_keyboard(items, page=1, per=15):
-    kb = InlineKeyboardMarkup(row_width=3)
+    kb = InlineKeyboardMarkup(row_width=2)
     chunk, page, total = _page_slice(order_countries(items), page, per)
     buttons = []
     for item in chunk:
@@ -139,7 +139,7 @@ def buy_countries_keyboard(items, page=1, per=15):
 
 
 def buy_services_keyboard(items, page=1, per=15):
-    kb = InlineKeyboardMarkup(row_width=3)
+    kb = InlineKeyboardMarkup(row_width=2)
     chunk, page, total = _page_slice(order_services(items), page, per)
     buttons = []
     for item in chunk:
