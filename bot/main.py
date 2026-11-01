@@ -200,17 +200,18 @@ def _fmt_price(usd, uid) -> str:
 
 
 def _idr_label(usd, uid) -> str:
-    """Label tombol harga: ' (Rp...)' saat mode IDR, kosong saat USD."""
+    """Label tombol harga: '💵 Rp...' saat mode IDR, '💵 USD' saat USD."""
+    usd = str(usd)
     if (get_state(uid, "settings_currency") or "usd") != "idr":
-        return ""
+        return f"💵 {usd}"
     rate = _idr_rate()
     if not rate:
-        return ""
+        return f"💵 {usd}"
     try:
         rp = f"{int(float(usd) * rate):,}".replace(",", ".")
     except (TypeError, ValueError):
-        return ""
-    return f" (Rp{rp})"
+        return f"💵 {usd}"
+    return f"💵 Rp{rp}"
 
 
 # ── Command ─────────────────────────────────────────────────────
@@ -565,7 +566,7 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
         for price, count in entries:
             lines.append(f"• {_fmt_price(price, uid)} — stok {code(count)}")
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-        kb.add(*[telebot.types.InlineKeyboardButton(f"💵 {price}{_idr_label(price, uid)}", callback_data=f"buy:price:{price}") for price, _ in entries])
+        kb.add(*[telebot.types.InlineKeyboardButton(_idr_label(price, uid), callback_data=f"buy:price:{price}") for price, _ in entries])
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Batal", callback_data="menu:buy_activation"))
         _edit(chat, msg_id, "\n".join(lines), kb)
         _answer(call, "Pilih harga")
