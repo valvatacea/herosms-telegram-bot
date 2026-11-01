@@ -334,7 +334,7 @@ def welcome_msg() -> str:
         "Selamat datang\\! Bot ini membantu Anda:\n"
         f"• {esc('Cek saldo & statistik akun')}\n"
         f"• {esc('Lihat negara, layanan, dan harga')}\n"
-        f"• {esc('Beli nomor verifikasi (SMS & email)')}\n"
+        f"• {esc('Beli nomor verifikasi SMS/OTP')}\n"
         f"• {esc('Terima OTP langsung di chat')}\n"
         f"• {esc('Selesaikan, batalkan, atau perpanjang aktivasi')}\n"
         "\nPilih menu di bawah untuk memulai 👇\n"
@@ -356,34 +356,6 @@ def error_msg(title: str, detail: str) -> str:
 
 def success_msg(title: str, detail: str) -> str:
     return f"{header('✅ ' + esc(title), '')}\n{esc(detail)}\n"
-
-
-def email_list_msg(data: Dict) -> str:
-    items = data.get("data", []) if isinstance(data, dict) else []
-    lines = [header("📬 Aktivasi Email Aktif", "Daftar pembelian email")]
-    if not items:
-        return lines[0] + "\nBelum ada aktivasi email\\.\n"
-    for item in items[:15]:
-        if isinstance(item, dict):
-            eid = item.get("id", "-")
-            email = item.get("email") or item.get("domain", "-")
-            status = item.get("status", "-")
-            lines.append(f"• {code(str(eid))} | {esc(str(email))} | {esc(str(status))}")
-    if len(items) > 15:
-        lines.append(f"\n_…dan {len(items) - 15} entri lain\\._")
-    return "\n".join(lines) + "\n"
-
-
-def email_detail_msg(data: Dict) -> str:
-    lines = [header("📧 Detail Aktivasi Email", f"ID: {code(str(data.get('id','-')))}")]
-    lines.append(f"{bold('Email/Domain:')} {esc(str(data.get('email') or data.get('domain','-')))}")
-    lines.append(f"{bold('Status:')} {esc(str(data.get('status','-')))}")
-    lines.append(f"{bold('Layanan:')} {esc(str(data.get('service','-')))}")
-    if data.get("cost"):
-        lines.append(f"{bold('Biaya:')} {code(str(data.get('cost')))} {code(str(data.get('currency','')))}")
-    if data.get("createDate"):
-        lines.append(f"{bold('Dibuat:')} {code(str(data.get('createDate')))}")
-    return "\n".join(lines) + "\n"
 
 
 def buy_confirm_msg(country: str, service: str, price: str, currency: str = "", duration: str = "-", price_str: str = "") -> str:

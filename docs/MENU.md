@@ -11,7 +11,6 @@ Ketik `/start` atau `/menu`:
 | 💰 Saldo | Saldo — format ikut mata uang (`💵 $x` / `🇮🇩 Rpx`) |
 | 📊 Statistik | Statistik aktivasi per negara/layanan (nama) |
 | 🛒 Beli Nomor | Mulai flow pembelian (lihat bawah) |
-| 🌬️ Email | Submenu aktivasi email |
 | 📋 Aktif | Daftar aktivasi berjalan (biaya ikut mata uang) |
 | 📜 Riwayat | Riwayat aktivasi selesai (14 hari, batas API) |
 | ⚙️ Pengaturan | Bahasa, mata uang USD/IDR, auto-batal OTP |
@@ -50,13 +49,6 @@ Nomor HP hanya ada SETELAH pembelian sukses (di-assign provider saat transaksi).
 | 🌐 Bahasa | Indonesia (English: segera) |
 | 💵 USD / 🇮🇩 IDR | Mata uang tampilan (IDR = konversi kurs, cache 24 jam) |
 | ⏱ Auto-Batal OTP | NONAKTIF → 5 → 10 → 15 menit (batal otomatis tanpa OTP + refund + notif) |
-
-## Email
-
-```
-🌬️ Email → 📧 Domain / 💵 Offers / 📬 Daftar Email
-```
-Domain & offers meminta input `site` (contoh: telegram.com) sebelum render.
 
 ## Pesan sistem
 

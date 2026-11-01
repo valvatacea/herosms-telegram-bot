@@ -15,7 +15,6 @@ Bot Telegram untuk **aktivasi OTP SMS** via [HeroSMS](https://hero-sms.com) (RES
 | ✅ Selesai / Batal | Selesaikan (tanpa refund) atau batalkan (refund; konfirmasi dulu) |
 | 🔄 Reaktivasi | Aktifkan kembali nomor yang sudah selesai |
 | 📋 Aktif / 📜 Riwayat | Aktivasi berjalan & riwayat selesai (14 hari, batas API) |
-| 🌬️ Email | Domain, offers, beli aktivasi email |
 | ⚙️ Pengaturan | Bahasa (struktur; Indonesia aktif) & mata uang USD/IDR + auto-batal |
 
 ### Skema pembelian

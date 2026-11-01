@@ -13,7 +13,6 @@ def main_menu() -> InlineKeyboardMarkup:
         InlineKeyboardButton("💰 Saldo", callback_data="menu:balance"),
         InlineKeyboardButton("📊 Statistik", callback_data="menu:stats"),
         InlineKeyboardButton("🛒 Beli Nomor", callback_data="menu:buy_activation"),
-        InlineKeyboardButton("📬 Email", callback_data="menu:email"),
         InlineKeyboardButton("📋 Aktif", callback_data="menu:active"),
         InlineKeyboardButton("📜 Riwayat", callback_data="menu:history"),
     )
@@ -200,21 +199,10 @@ def confirm_keyboard(action: str, activation_id: str) -> InlineKeyboardMarkup:
     return kb
 
 
-def email_menu() -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup(row_width=2)
-    kb.add(
-        InlineKeyboardButton("📧 Domain", callback_data="email:domains"),
-        InlineKeyboardButton("💵 Offers", callback_data="email:offers"),
-        InlineKeyboardButton("📬 Daftar Email", callback_data="email:list"),
-    )
-    kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
-    return kb
-
-
 # ── Pagination ────────────────────────────────────────────────────
 
 def pagination_keys(page: int, total_pages: int, prefix: str) -> list[InlineKeyboardButton]:
-    """Tombol prev/next untuk daftar yang dipaginasi. prefix = 'active'|'history'|'email'."""
+    """Tombol prev/next untuk daftar yang dipaginasi. prefix = 'active'|'history'."""
     buttons: list[InlineKeyboardButton] = []
     if page > 1:
         buttons.append(InlineKeyboardButton("⬅️ Sebelumnya", callback_data=f"{prefix}:page:{page - 1}"))

@@ -6,10 +6,8 @@ import requests
 import time
 from typing import Any, Dict, List, Optional
 
-
 class HeroSMSError(Exception):
     pass
-
 
 class HeroSMS:
     def __init__(self, api_key: str, base_url: str):
@@ -184,49 +182,6 @@ class HeroSMS:
         text = data.get("text", "") if isinstance(data, dict) else str(data)
         val = text.split(":", 1)[1].strip() if ":" in text else text
         return {"balance": val}
-
-    # ── Emails ───────────────────────────────────────────────────
-
-    def email_list(
-        self,
-        size: int = 20,
-        page: int = 1,
-        sort: Optional[str] = None,
-        search: Optional[str] = None,
-    ) -> Dict:
-        params: Dict[str, Any] = {"size": size, "page": page}
-        if sort: params["sort"] = sort
-        if search: params["search"] = search
-        return self._get("/emails", params)
-
-    def buy_email_activation(
-        self,
-        domain: str,
-        service: str,
-        verification_type: Optional[str] = None,
-    ) -> Dict:
-        json_body: Dict[str, Any] = {"domain": domain, "service": service}
-        if verification_type: json_body["verificationType"] = verification_type
-        return self._post("/emails", json=json_body)
-
-    def email_detail(self, email_id: str) -> Dict:
-        return self._get(f"/emails/{email_id}")
-
-    def cancel_email(self, email_id: str) -> Dict:
-        return self._delete(f"/emails/{email_id}")
-
-    def reorder_email(self, email_id: str) -> Dict:
-        return self._post(f"/emails/{email_id}/reorder")
-
-    def email_domains(self, site: Optional[str] = None) -> Dict:
-        params: Dict[str, Any] = {}
-        if site: params["site"] = site
-        return self._get("/emails/domains", params)
-
-    def email_offers(self, site: Optional[str] = None) -> Dict:
-        params: Dict[str, Any] = {}
-        if site: params["site"] = site
-        return self._get("/emails/offers", params)
 
     # ── SMS-Activate compatible (query action) ───────────────────
 

@@ -19,7 +19,6 @@ from bot.keyboards import (
     back_menu,
     activation_actions,
     confirm_keyboard,
-    email_menu,
     buy_countries_keyboard,
     buy_services_keyboard,
     buy_confirm_keyboard,
@@ -44,8 +43,6 @@ from bot.messages import (
     otp_msg,
     purchase_success,
     welcome_msg,
-    email_list_msg,
-    email_detail_msg,
     confirm_msg,
     buy_confirm_msg,
     error_msg,
@@ -286,7 +283,7 @@ def cmd_help(message: Message) -> None:
         "Fitur:\n"
         "• 💰 Saldo & statistik akun\n"
         "• 🌍 Negara, layanan, harga\n"
-        "• 🛒 Beli nomor verifikasi \\(SMS/email\\)\n"
+        "• 🛒 Beli nomor verifikasi SMS/OTP\n"
         "• 📨 OTP terakhir / daftar OTP\n"
         "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi · ⏳ Perpanjang\n"
     )
@@ -329,9 +326,6 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data == "menu:buy_activation":
             _start_buy_flow(chat, msg_id, uid, call)
-
-        elif data == "menu:email":
-            _show_email_menu(chat, msg_id, call)
 
         elif data == "menu:active":
             _show_active(chat, msg_id, call, page=1)
@@ -432,10 +426,6 @@ def on_callback(call: CallbackQuery) -> None:
             page = int(data.split(":", 2)[2])
             _show_history(chat, msg_id, call, page=page)
 
-        elif data.startswith("email:page:"):
-            page = int(data.split(":", 2)[2])
-            _show_email_list(chat, msg_id, call, page=page)
-
         elif data.startswith("otp:page:"):
             parts = data.split(":", 3)
             aid = parts[2]
@@ -476,82 +466,6 @@ def on_callback(call: CallbackQuery) -> None:
             aid = data.split(":", 2)[2]
             _do_reactivate(chat, msg_id, aid, call)
 
-        elif data.startswith("email:domains"):
-            _show_email_domains(chat, msg_id, call)
-
-        elif data.startswith("email:offers"):
-            _show_email_offers(chat, msg_id, call)
-
-        elif data.startswith("email:list"):
-            _show_email_list(chat, msg_id, call, page=1)
-
-        elif data.startswith("email:buy:"):
-            domain = data.split(":", 2)[2]
-            set_state(uid, "email_domain", domain)
-            _show_email_services_for_buy(chat, msg_id, uid, domain, call)
-
-        elif data.startswith("email:service:"):
-            service = data.split(":", 2)[2]
-            _do_email_purchase(chat, msg_id, uid, service, call)
-
-        elif data.startswith("email:detail:"):
-            eid = data.split(":", 2)[2]
-            _show_email_detail(chat, msg_id, eid, call)
-
-        elif data.startswith("email:cancel:"):
-            eid = data.split(":", 2)[2]
-            _do_email_cancel(chat, msg_id, eid, call)
-
-        elif data.startswith("email:reorder:"):
-            eid = data.split(":", 2)[2]
-            _do_email_reorder(chat, msg_id, eid, call)
-
-        else:
-            _answer(call, "Tombol tidak dikenal.", alert=True)
-
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Permintaan Gagal", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-    except Exception as exc:  # noqa: BLE001
-        log.exception("callback error")
-        _edit(chat, msg_id, error_msg("Error Tak Terduga", str(exc)), back_menu())
-        _answer(call, _alert("Error tak terduga", exc), alert=True)
-
-
-# ── Helper tampilan ─────────────────────────────────────────────
-
-def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    try:
-        uid = call.from_user.id
-        data = api.get_balance()
-        bal = str(data.get("balance", "-"))
-        _edit(chat, msg_id, balance_msg(data, _price_disp(bal, uid)), back_menu())
-        _answer(call, "Saldo dimuat")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _show_settings(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
-    lang = get_state(uid, "settings_lang") or "id"
-    cur = get_state(uid, "settings_currency") or "usd"
-    ac = str(get_state(uid, "settings_autocancel") or "off")
-    lang_name = "Indonesia" if lang == "id" else "English"
-    ac_name = "Nonaktif" if ac == "off" else f"{ac} menit"
-    text = (
-        "🔹 *Pengaturan*\n\n"
-        f"Bahasa: {esc(lang_name)}\n"
-        f"Mata uang tampilan: {code(cur.upper())}\n"
-        f"Auto\\-batal tanpa OTP: {esc(ac_name)}\n"
-        "Harga HeroSMS selalu USD, mode IDR menampilkan konversi kurs"
-    )
-    _edit(chat, msg_id, text, settings_menu(lang, cur, ac))
-    _answer(call, "Pengaturan")
-
-
-def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    try:
-        data = api.user_stats()
         # Kunci respons = kode (6/go) -> ubah ke nama (Indonesia/Telegram)
         if isinstance(data, dict) and isinstance(data.get("data"), dict):
             data = {"data": {
@@ -892,173 +806,6 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
         _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
 
-
-# ── Email ───────────────────────────────────────────────────────
-
-def _show_email_menu(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    _edit(chat, msg_id, "🔹 *Aktivasi Email*\n\nManajemen aktivasi via email:", email_menu())
-    _answer(call, "Menu email")
-
-
-def _show_email_domains(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    uid = call.from_user.id
-    site = get_state(uid, "email_site")
-    if not site:
-        set_state(uid, "_email_pending", "domains")
-        set_state(uid, "_email_chat", chat)
-        set_state(uid, "_email_msg_id", msg_id)
-        bot.send_message(chat, "Masukkan site \\(contoh: telegram\\.com\\):")
-        bot.register_next_step_handler(call.message, _handle_email_site_input)
-        _answer(call, "Masukkan site dulu")
-        return
-    _email_domains_render(chat, msg_id, uid, site)
-
-def _email_domains_render(chat: int, msg_id: int, uid: int, site: str) -> None:
-    try:
-        data = api.email_domains(site=site)
-        items = data.get("data", data) if isinstance(data, dict) else data
-        kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-        buttons = []
-        for item in items[:20]:
-            if isinstance(item, dict):
-                name = item.get("name", "-")
-                did = item.get("id", item.get("domain", "-"))
-                buttons.append(telebot.types.InlineKeyboardButton(
-                    f"📧 {name}", callback_data=f"email:buy:{did}"))
-        kb.add(*buttons)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:email"))
-        _edit(chat, msg_id, "🔹 *Domain Email*\n\nPilih domain:", kb)
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Domain", str(exc)), back_menu())
-
-
-def _show_email_offers(chat: int, msg_id: int, call: CallbackQuery) -> None:
-    uid = call.from_user.id
-    site = get_state(uid, "email_site")
-    if not site:
-        set_state(uid, "_email_pending", "offers")
-        set_state(uid, "_email_chat", chat)
-        set_state(uid, "_email_msg_id", msg_id)
-        bot.send_message(chat, "Masukkan site \\(contoh: telegram\\.com\\):")
-        bot.register_next_step_handler(call.message, _handle_email_site_input)
-        _answer(call, "Masukkan site dulu")
-        return
-    _email_offers_render(chat, msg_id, uid, site)
-
-def _email_offers_render(chat: int, msg_id: int, uid: int, site: str) -> None:
-    try:
-        data = api.email_offers(site=site)
-        _edit(chat, msg_id, prices_msg(data), back_menu())
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Offers", str(exc)), back_menu())
-
-def _handle_email_site_input(message: Message) -> None:
-    uid = message.from_user.id
-    if message.text.startswith("/"):
-        return
-    site = message.text.strip()
-    if not site:
-        return
-    set_state(uid, "email_site", site)
-    pending = get_state(uid, "_email_pending") or "domains"
-    chat = get_state(uid, "_email_chat") or message.chat.id
-    msg_id = get_state(uid, "_email_msg_id") or message.message_id
-    set_state(uid, "_email_pending", None)
-    set_state(uid, "_email_chat", None)
-    set_state(uid, "_email_msg_id", None)
-    if pending == "domains":
-        _email_domains_render(chat, msg_id, uid, site)
-    else:
-        _email_offers_render(chat, msg_id, uid, site)
-
-
-def _show_email_list(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> None:
-    uid = call.from_user.id
-    size = 15
-    try:
-        data = api.email_list(page=page, size=size)
-        items = data.get("data", []) if isinstance(data, dict) else []
-        total = _total_pages_from(data, page, size)
-        _set_page(uid, "email", page)
-        kb = telebot.types.InlineKeyboardMarkup(row_width=1)
-        for item in items[:size]:
-            if isinstance(item, dict):
-                eid = item.get("id", "-")
-                email = item.get("email") or item.get("domain", "-")
-                kb.add(telebot.types.InlineKeyboardButton(
-                    f"📬 {email} (ID {eid})", callback_data=f"email:detail:{eid}"))
-        nav = pagination_keys(page, total, "email")
-        if nav:
-            kb.add(*nav)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Kembali", callback_data="menu:email"))
-        _edit(chat, msg_id, email_list_msg(data), kb)
-        _answer(call, f"Halaman {page}/{total}")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Email", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _show_email_services_for_buy(chat: int, msg_id: int, uid: int, domain: str, call: CallbackQuery) -> None:
-    try:
-        data = api.legacy("getServicesList")
-        items = _legacy_items(data)
-        kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-        buttons = []
-        for item in items[:25]:
-            if isinstance(item, dict):
-                name = item.get("name", "-")
-                sid = item.get("id", item.get("code", "-"))
-                buttons.append(telebot.types.InlineKeyboardButton(
-                    f"📱 {name}", callback_data=f"email:service:{sid}"))
-        kb.add(*buttons)
-        kb.add(telebot.types.InlineKeyboardButton("⬅️ Domain", callback_data="email:domains"))
-        _edit(chat, msg_id, f"🔹 *Layanan Email - {domain}*\n\nPilih layanan:", kb)
-        _answer(call, "Pilih layanan")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Layanan", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _do_email_purchase(chat: int, msg_id: int, uid: int, service: str, call: CallbackQuery) -> None:
-    domain = get_state(uid, "email_domain")
-    try:
-        act = api.buy_email_activation(domain=domain, service=service)
-        clear_state(uid)
-        _edit(chat, msg_id, purchase_success(act), email_menu())
-        _answer(call, "Aktivasi email dibeli")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Beli Email", str(exc)), back_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _show_email_detail(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> None:
-    try:
-        data = api.email_detail(eid)
-        _edit(chat, msg_id, email_detail_msg(data), email_menu())
-        _answer(call, "Detail email")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), email_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _do_email_cancel(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> None:
-    try:
-        api.cancel_email(eid)
-        _edit(chat, msg_id, success_msg("Email Dibatalkan", f"Aktivasi email ID {eid} telah dibatalkan."), back_menu())
-        _answer(call, "Dibatalkan")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), email_menu())
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _do_email_reorder(chat: int, msg_id: int, eid: str, call: CallbackQuery) -> None:
-    try:
-        api.reorder_email(eid)
-        _edit(chat, msg_id, success_msg("Email Dipesan Ulang", f"Aktivasi email ID {eid} telah dipesan ulang."), email_menu())
-        _answer(call, "Dipesan ulang")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Pesan Ulang", str(exc)), email_menu())
-        _answer(call, _alert("Error", exc), alert=True)
 
 
 # ── Aktivasi SMS ────────────────────────────────────────────────
