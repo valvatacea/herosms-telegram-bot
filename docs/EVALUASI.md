@@ -1,7 +1,7 @@
 # Evaluasi HeroSMS Telegram Bot
 
 Tanggal evaluasi: 2026-11-01 (UTC)
-Versi: commit `83cc987`
+Versi: commit `(belum di-commit)`
 
 ## 1. Rekapitulasi semua fitur yang sudah selesai
 
@@ -39,7 +39,9 @@ Versi: commit `83cc987`
 | 4 | Tidak ada rate limiting / retry | Sedang | Retry exponential backoff (max 3x) pada 429/5xx di klien API | `d3f14ee` |
 | 5 | Tidak ada riwayat transaksi detail | Sedang | Rekam pembelian di state, menu Riwayat Transaksi + total | `72d6503` |
 | 6 | Tidak ada multi-bot / multi-account | Rendah | `HEROSMS_STATE_FILE` untuk state file terpisah per instance | `f993eb9` |
-| 7 | Tidak ada fitur resend SMS | Sedang | Tambah `resend_sms()` di klien API (`setStatus` status 3), tombol Konfirmasi Kirim Ulang di keyboard, handler `act:resend:` / `confirm:resend:` di router | (commit ini) |
+| 7 | Tidak ada fitur resend SMS | Sedang | Tambah `resend_sms()` di klien API (`setStatus` status 3), tombol Konfirmasi Kirim Ulang di keyboard, handler `act:resend:` / `confirm:resend:` di router | `83cc987` |
+| 8 | Notifikasi OTP hanya opt-in per activation | Sedang | Poller sekarang memantau semua activation dari `purchases` (default ON / opt-out), tombol "Nyalakan / Matikan Notif OTP" | (commit ini) |
+| 9 | Riwayat transaksi hanya harga historis | Rendah | Tambah lookup harga terkini (`getPrices`) saat menampilkan riwayat, tampilkan "(sekarang: ...)" jika berbeda | (commit ini) |
 
 ## 3. Kekuatan bot saat ini
 
@@ -55,8 +57,8 @@ Versi: commit `83cc987`
 
 | No | Keterbatasan | Dampak | Prioritas |
 |----|--------------|--------|-----------|
-| 1 | **Notifikasi OTP hanya untuk activation yang dipantau** — user harus klik "Pantau OTP" dulu. | OTP tidak diforward otomatis untuk semua aktivasi. | Sedang |
-| 2 | **Harga belum tersimpan pada saat transaction dilihat kembali** — riwayat tampil harga saat pembelian, tidak harga saat ini. | Harga di riwayat adalah harga historis. | Rendah |
+- **Notifikasi OTP otomatis untuk semua aktivasi** — background poler sekarang memantau semua activation dari riwayat pembelian (opt-out). Tombol berubah jadi "Nyalakan / Matikan Notif OTP".
+- **Harga terkini di riwayat transaksi** — saat melihat riwayat, bot menambahkan harga saat ini (jika berbeda dari harga pembelian) via lookup `getPrices`.
 
 ## 5. Risiko & catatan teknis
 
@@ -92,8 +94,8 @@ python3 -m tests.test_herosms
 
 - GitHub: https://github.com/valvatacea/herosms-telegram-bot
 - Branch: `master`
-- Commit terbaru: `83cc987`
+- Commit terbaru: `(belum di-commit)`
 
 ## 9. Kesimpulan
 
-Semua 7 gap dari evaluasi sebelumnya telah ditutup. Bot sekarang memiliki pagination, notifikasi OTP otomatis, riwayat transaksi, retry API, dan dukungan multi-instance. Semua kode kompilasi bersih dan semua 7 tes lolos. Bot siap untuk production dengan `.env` yang diisi.
+Semua 9 gap dari evaluasi sebelumnya telah ditutup. Bot sekarang memiliki pagination, notifikasi OTP otomatis, riwayat transaksi, retry API, dan dukungan multi-instance. Semua kode kompilasi bersih dan semua 7 tes lolos. Bot siap untuk production dengan `.env` yang diisi.

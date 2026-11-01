@@ -801,15 +801,34 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
 
     total = 0.0
     lines = ["💰 *Riwayat Transaksi*\n"]
+    price_cache: dict[tuple[str, str], tuple[str, str]] = {}
     for p in reversed(purchases[-20:]):
         try:
             total += float(str(p.get("price", "0")).replace(",", "."))
         except (ValueError, TypeError):
             pass
-        lines.append(
-            f"• {p.get('time', '-')} | {p.get('service', '-')}"
-            f" | {p.get('country', '-')} | {p.get('price', '-')} {p.get('currency', '')}"
+        country = p.get("country", "-")
+        service = p.get("service", "-")
+        hist_price = p.get("price", "-")
+        hist_cur = p.get("currency", "")
+        cur_price, cur_cur = hist_price, hist_cur
+        if country != "-" and service != "-":
+            key = (country, service)
+            if key not in price_cache:
+                try:
+                    cur_price, cur_cur = _lookup_price(country, service)
+                except Exception:  # noqa: BLE001
+                    cur_price, cur_cur = hist_price, hist_cur
+                price_cache[key] = (cur_price, cur_cur)
+            else:
+                cur_price, cur_cur = price_cache[key]
+        line = (
+            f"• {p.get('time', '-')} | {service}"
+            f" | {country} | {hist_price} {hist_cur}"
         )
+        if cur_price != hist_price:
+            line += f" (sekarang: {cur_price} {cur_cur})"
+        lines.append(line)
     lines.append(f"\n*Total:* {total:g}")
     kb = InlineKeyboardMarkup(row_width=1)
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
@@ -871,16 +890,29 @@ def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery, page: 
 # ── Run ─────────────────────────────────────────────────────────
 
 def _start_otp_poller(bot, interval: int = 30):
-    """Background thread: cek aktivasi yang di-watch, kirim pesan saat OTP baru."""
+    """Background thread: cek semua aktivasi pembelian user, kirim pesan saat OTP baru (opt-out)."""
     import threading
     import time
 
     def loop():
         while True:
             try:
-                # Ambil semua user yang punya otp_watch
                 for uid in list(user_state.keys()):
-                    watch = _get_watch(uid)
+                    # Semua activation dari pembelian user (bukan hanya otp_watch)
+                    purchases = get_state(uid, "purchases", []) or []
+                    watch = _get_watch(uid) or {}
+                    changed = False
+
+                    # Daftarkan setiap purchase activation ke watch (default ON / opt-out)
+                    for p in purchases:
+                        aid = p.get("activation_id")
+                        if aid and aid not in watch:
+                            watch[aid] = None
+                            changed = True
+
+                    if changed:
+                        set_state(uid, "otp_watch", watch)
+
                     for aid in list(watch.keys()):
                         try:
                             data = api.otp_list(aid, page=1, size=5)
@@ -892,6 +924,7 @@ def _start_otp_poller(bot, interval: int = 30):
                             last_seen = watch.get(aid)
                             if latest_text and latest_text != last_seen:
                                 watch[aid] = latest_text
+                                changed = True
                                 set_state(uid, "otp_watch", watch)
                                 bot.send_message(
                                     uid,
