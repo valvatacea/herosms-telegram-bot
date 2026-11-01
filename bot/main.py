@@ -135,23 +135,21 @@ def _answer(call: CallbackQuery, text: str, alert: bool = False) -> None:
 
 def _edit(chat: int, msg_id: int, text: str, markup=None) -> None:
     try:
-        m = markup.to_dict() if hasattr(markup, "to_dict") else markup
-        bot.edit_message_text(text, chat, msg_id, reply_markup=m)
+        bot.edit_message_text(text, chat, msg_id, reply_markup=markup)
     except Exception:
-        m = markup.to_dict() if hasattr(markup, "to_dict") else markup
-        bot.send_message(chat, text, reply_markup=m)
+        bot.send_message(chat, text, reply_markup=markup)
 
 
 # ── Command ─────────────────────────────────────────────────────
 
 @bot.message_handler(commands=["start"])
 def cmd_start(message: Message) -> None:
-    bot.reply_to(message, welcome_msg(), reply_markup=main_menu().to_dict())
+    bot.reply_to(message, welcome_msg(), reply_markup=main_menu())
 
 
 @bot.message_handler(commands=["menu"])
 def cmd_menu(message: Message) -> None:
-    bot.send_message(message.chat.id, "Menu utama", reply_markup=main_menu().to_dict())
+    bot.send_message(message.chat.id, "Menu utama", reply_markup=main_menu())
 
 
 @bot.message_handler(commands=["help"])
@@ -171,7 +169,7 @@ def cmd_help(message: Message) -> None:
         "• 📨 OTP terakhir / daftar OTP\n"
         "• ✅ Selesai · ❌ Batalkan · 🔄 Reaktivasi · ⏳ Perpanjang\n"
     )
-    bot.reply_to(message, text, reply_markup=main_menu().to_dict())
+    bot.reply_to(message, text, reply_markup=main_menu())
 
 
 # ── Callback router ─────────────────────────────────────────────
@@ -469,13 +467,13 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
             _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", "")), watching=False))
             _answer(call, "Nomor dibeli")
         else:
-            bot.send_message(chat, purchase_success(act), reply_markup=activation_actions(str(act.get("id", "")), watching=False).to_dict())
+            bot.send_message(chat, purchase_success(act), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
     except HeroSMSError as exc:
         if call:
             _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
             _answer(call, str(exc), alert=True)
         else:
-            bot.send_message(chat, error_msg("Gagal Beli Nomor", str(exc)), reply_markup=back_menu().to_dict())
+            bot.send_message(chat, error_msg("Gagal Beli Nomor", str(exc)), reply_markup=back_menu())
 
 
 # ── Konfirmasi aksi destructive ─────────────────────────────────

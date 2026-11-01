@@ -1,0 +1,38 @@
+2026-11-01 04:23:21,284 INFO herosms-bot: Bot HeroSMS dimulai…
+2026-11-01 04:23:53,505 ERROR herosms-bot: callback error
+Traceback (most recent call last):
+  File "/root/herosms-telegram-bot/bot/main.py", line 138, in _edit
+    bot.edit_message_text(text, chat, msg_id, reply_markup=markup)
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 3839, in edit_message_text
+    result = apihelper.edit_message_text(self.token, text, chat_id, message_id, inline_message_id, parse_mode,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/apihelper.py", line 1327, in edit_message_text
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/apihelper.py", line 162, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/apihelper.py", line 189, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: can't parse entities: Character '.' is reserved and must be escaped with the preceding '\'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/herosms-telegram-bot/bot/main.py", line 221, in on_callback
+    _show_transactions(chat, msg_id, call)
+  File "/root/herosms-telegram-bot/bot/main.py", line 752, in _show_transactions
+    _edit(chat, msg_id, txt, back_menu())
+  File "/root/herosms-telegram-bot/bot/main.py", line 140, in _edit
+    bot.send_message(chat, text, reply_markup=markup)
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 1549, in send_message
+    apihelper.send_message(
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/apihelper.py", line 264, in send_message
+    return _make_request(token, method_url, params=payload, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/apihelper.py", line 162, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/herosms-telegram-bot/.venv/lib/python3.12/site-packages/telebot/apihelper.py", line 189, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: can't parse entities: Character '.' is reserved and must be escaped with the preceding '\'
