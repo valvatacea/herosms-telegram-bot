@@ -57,6 +57,8 @@ Setiap aktivasi aktif memiliki tombol:
 | ❌ Batalkan | Batalkan & saldo dikembalikan (dikorekansi dulu) |
 | 🔄 Reaktivasi | Hidupkan kembali aktivasi |
 | ⏳ Perpanjang | Perpanjang masa aktif |
+| 🔄 Kirim Ulang SMS | Minta pengiriman ulang SMS (dikorekansi dulu) |
+| 🔔 Nyalakan / Matikan Notif OTP | Aktifkan/nonaktifkan notifikasi OTP otomatis (default ON) |
 
 ## Pesan sistem
 

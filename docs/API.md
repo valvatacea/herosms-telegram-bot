@@ -52,6 +52,7 @@ Base URL: `https://hero-sms.com/api/v1`
 
 | Method | Path | Fungsi klien | Keterangan |
 |--------|------|--------------|------------|
+| GET | `/stubs/handler_api.php?action=setStatus` | `resend_sms(activation_id)` | Minta pengiriman ulang SMS (status 3) |
 | GET | `/stubs/handler_api.php?action=...` | `legacy(action, params)` | Endpoint kompatibel SMS-Activate (getCountries, getServicesList, getPrices, dst.) |
 
 ## Autentikasi

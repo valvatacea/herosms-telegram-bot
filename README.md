@@ -11,6 +11,8 @@ Bot Telegram yang mencakup **seluruh API HeroSMS** (OpenAPI 3.2.0, versi 1.0) de
 | 🛒 Beli Nomor | Beli nomor verifikasi SMS/OTP per negara & layanan |
 | 📨 OTP | Terima OTP terakhir atau daftar seluruh OTP |
 | ✅ Selesai / ❌ Batalkan | Selesaikan atau batalkan aktivasi (dengan konfirmasi) |
+| 🔄 Kirim Ulang SMS | Minta pengiriman ulang SMS (dikorekansi dulu) |
+| 🔔 Notif OTP | Notifikasi OTP otomatis untuk semua pembelian (default ON, matikan kapan saja) |
 | 🔄 Reaktivasi | Reaktivasi aktivasi yang sudah selesai |
 | ⏳ Perpanjang | Perpanjang masa aktif aktivasi |
 | 📬 Email | Domain, offers, beli, detail, batal, pesan ulang aktivasi email |
