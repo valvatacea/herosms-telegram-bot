@@ -802,6 +802,10 @@ def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid, watching=w))
         _answer(call, "Di-reaktivasi")
     except HeroSMSError as exc:
+        if "SIM_OFFLINE" in str(exc):
+            _edit(chat, msg_id, "🔹 *Nomor Tidak Tersedia*\n\nNomor ini sedang tidak aktif di server, jadi tidak bisa di-reaktivasi sekarang\\. Coba lagi nanti atau beli nomor baru di menu 🛒\\.", activation_actions(aid, watching=w))
+            _answer(call, "Nomor tidak tersedia")
+            return
         _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=w))
         _answer(call, _alert("Error", exc), alert=True)
 
