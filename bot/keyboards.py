@@ -40,7 +40,6 @@ def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyb
         # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),
         InlineKeyboardButton("🔄 Reaktivasi", callback_data=f"act:reactivate:{activation_id}"),
-        InlineKeyboardButton("⏳ Perpanjang", callback_data=f"act:prolong:{activation_id}"),
     )
     kb.add(InlineKeyboardButton("⬅️ Daftar Aktif", callback_data="menu:active"))
     kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))

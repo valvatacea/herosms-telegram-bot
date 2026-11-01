@@ -147,17 +147,6 @@ class HeroSMS:
     def reactivate_options(self, activation_id: str) -> Dict:
         return self._get(f"/activations/{activation_id}/reactivate/options")
 
-    def prolong_activation(self, activation_id: str, duration: Optional[str] = None) -> Dict:
-        json_body: Dict[str, Any] = {}
-        if duration: json_body["duration"] = duration
-        return self._post(f"/activations/{activation_id}/prolong", json=json_body)
-
-    def prolong_options(self, activation_id: str) -> Dict:
-        return self._get(f"/activations/{activation_id}/prolong/options")
-
-    def prolong_history(self, activation_id: str) -> Dict:
-        return self._get(f"/activations/{activation_id}/prolong/history")
-
     def resend_sms(self, activation_id: str) -> Dict:
         """Minta pengiriman ulang SMS (status 3 = request resending of SMS)."""
         return self.legacy("setStatus", {"id": activation_id, "status": 3})

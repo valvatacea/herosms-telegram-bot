@@ -337,10 +337,6 @@ def on_callback(call: CallbackQuery) -> None:
             aid = data.split(":", 2)[2]
             _do_reactivate(chat, msg_id, aid, call)
 
-        elif data.startswith("act:prolong:"):
-            aid = data.split(":", 2)[2]
-            _do_prolong(chat, msg_id, aid, call)
-
         elif data.startswith("email:domains"):
             _show_email_domains(chat, msg_id, call)
 
@@ -627,16 +623,6 @@ def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> Non
         _answer(call, "Di-reaktivasi")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
-        _answer(call, _alert("Error", exc), alert=True)
-
-
-def _do_prolong(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
-    try:
-        api.prolong_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Diperpanjang", f"Aktivasi ID {aid} telah diperpanjang."), activation_actions(aid, watching=_is_watching(uid, aid)))
-        _answer(call, "Diperpanjang")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Perpanjang", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, _alert("Error", exc), alert=True)
 
 
