@@ -133,10 +133,16 @@ def _nav_row(kb, page, total, prefix, lang):
 def buy_countries_keyboard(items, page=1, per=15, lang="id"):
     kb = InlineKeyboardMarkup(row_width=2)
     chunk, page, total = _page_slice(order_countries(items), page, per)
-    for item in chunk:
-        name = item.get("eng", item.get("name", "-"))
-        cid = item.get("id", item.get("code", "-"))
-        kb.add(InlineKeyboardButton("{} {}".format(flag(name), name), callback_data="buy:country:{}:{}".format(cid, str(name)[:30])))
+    buttons = [
+        (item.get("eng", item.get("name", "-")), item.get("id", item.get("code", "-")))
+        for item in chunk
+    ]
+    for i in range(0, len(buttons), 2):
+        kb.add(*[
+            InlineKeyboardButton("{} {}".format(flag(name_), name_),
+                                 callback_data="buy:country:{}:{}".format(cid, str(name_)[:30]))
+            for name_, cid in buttons[i:i + 2]
+        ])
     _nav_row(kb, page, total, "buy:countries", lang)
     kb.add(InlineKeyboardButton(t(lang, "cari_negara", p=page, t=total), callback_data="buy:search:country"))
     kb.add(InlineKeyboardButton(t(lang, "btn_kembali"), callback_data="menu:main"))
@@ -146,10 +152,15 @@ def buy_countries_keyboard(items, page=1, per=15, lang="id"):
 def buy_services_keyboard(items, page=1, per=15, lang="id"):
     kb = InlineKeyboardMarkup(row_width=2)
     chunk, page, total = _page_slice(order_services(items), page, per)
-    for item in chunk:
-        name = item.get("name", "-")
-        sid = item.get("id", item.get("code", "-"))
-        kb.add(InlineKeyboardButton("📱 {}".format(name), callback_data="buy:service:{}:{}".format(sid, str(name)[:30])))
+    buttons = [
+        (item.get("name", "-"), item.get("id", item.get("code", "-")))
+        for item in chunk
+    ]
+    for i in range(0, len(buttons), 2):
+        kb.add(*[
+            InlineKeyboardButton("📱 {}".format(name_), callback_data="buy:service:{}:{}".format(sid, str(name_)[:30]))
+            for name_, sid in buttons[i:i + 2]
+        ])
     _nav_row(kb, page, total, "buy:services", lang)
     kb.add(InlineKeyboardButton(t(lang, "cari_layanan", p=page, t=total), callback_data="buy:search:service"))
     kb.add(InlineKeyboardButton(t(lang, "btn_negara_beli"), callback_data="menu:buy_activation"))
