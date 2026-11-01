@@ -28,11 +28,12 @@ def back_menu() -> InlineKeyboardMarkup:
     return kb
 
 
-def activation_actions(activation_id: str) -> InlineKeyboardMarkup:
+def activation_actions(activation_id: str, watching: bool = False) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(
         InlineKeyboardButton("📨 OTP Terakhir", callback_data=f"otp:last:{activation_id}"),
         InlineKeyboardButton("📋 Semua OTP", callback_data=f"otp:list:{activation_id}"),
+        InlineKeyboardButton("🔔 Pantau OTP" if not watching else "🔕 Berhenti Pantau", callback_data=f"otp:watch:{activation_id}"),
         # Destructive actions butuh konfirmasi dulu
         InlineKeyboardButton("✅ Selesai", callback_data=f"act:confirm:finish:{activation_id}"),
         InlineKeyboardButton("❌ Batalkan", callback_data=f"act:confirm:cancel:{activation_id}"),

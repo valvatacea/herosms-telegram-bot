@@ -71,7 +71,6 @@ def _total_pages_from(data: dict, page: int, size: int) -> int:
     """Estimasi total halaman dari respons API. Default: page (+1 jika penuh)."""
     if not isinstance(data, dict):
         return page
-    # Coba baca info pagination dari respons
     for key in ("total", "totalPages", "pages", "last_page"):
         if key in data:
             try:
@@ -88,8 +87,30 @@ def _total_pages_from(data: dict, page: int, size: int) -> int:
                     pass
     items = data.get("data", [])
     if isinstance(items, list) and len(items) >= size:
-        return page + 1  # ada kemungkinan halaman berikutnya
+        return page + 1
     return page
+
+
+# ── OTP watch (notifikasi otomatis) ───────────────────────────────
+
+def _get_watch(uid: int) -> dict:
+    return get_state(uid, "otp_watch", {}) or {}
+
+
+def _is_watching(uid: int, aid: str) -> bool:
+    return aid in (_get_watch(uid) or {})
+
+
+def _watch_toggle(uid: int, aid: str) -> bool:
+    """Toggle watch. Return True jika sekarang sedang di-watch."""
+    watch = _get_watch(uid)
+    if aid in watch:
+        del watch[aid]
+        set_state(uid, "otp_watch", watch)
+        return False
+    watch[aid] = None
+    set_state(uid, "otp_watch", watch)
+    return True
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -209,6 +230,11 @@ def on_callback(call: CallbackQuery) -> None:
         elif data.startswith("otp:list:"):
             aid = data.split(":", 2)[2]
             _show_otp_list(chat, msg_id, aid, call, page=1)
+
+        elif data.startswith("otp:watch:"):
+            aid = data.split(":", 2)[2]
+            now_watching = _watch_toggle(uid, aid)
+            _show_activation_detail(chat, msg_id, aid, call)
 
         elif data.startswith("active:page:"):
             page = int(data.split(":", 2)[2])
@@ -456,10 +482,10 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         act = api.buy_activation(service=service, country=country)
         clear_state(uid)
         if call:
-            _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", ""))))
+            _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", "")), watching=False))
             _answer(call, "Nomor dibeli")
         else:
-            bot.send_message(chat, purchase_success(act), reply_markup=activation_actions(str(act.get("id", ""))))
+            bot.send_message(chat, purchase_success(act), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
     except HeroSMSError as exc:
         if call:
             _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())
@@ -498,7 +524,7 @@ def _do_finish(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
         _edit(chat, msg_id, success_msg("Aktivasi Selesai", f"Aktivasi ID {aid} telah diselesaikan."), back_menu())
         _answer(call, "Selesai")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Selesaikan", str(exc)), activation_actions(aid))
+        _edit(chat, msg_id, error_msg("Gagal Selesaikan", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, str(exc), alert=True)
 
 
@@ -508,27 +534,27 @@ def _do_cancel(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
         _edit(chat, msg_id, success_msg("Aktivasi Dibatalkan", f"Aktivasi ID {aid} telah dibatalkan."), back_menu())
         _answer(call, "Dibatalkan")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid))
+        _edit(chat, msg_id, error_msg("Gagal Batalkan", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, str(exc), alert=True)
 
 
 def _do_reactivate(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
     try:
         api.reactivate_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid))
+        _edit(chat, msg_id, success_msg("Aktivasi Di-reaktivasi", f"Aktivasi ID {aid} telah di-reaktivasi."), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, "Di-reaktivasi")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid))
+        _edit(chat, msg_id, error_msg("Gagal Reaktivasi", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, str(exc), alert=True)
 
 
 def _do_prolong(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
     try:
         api.prolong_activation(aid)
-        _edit(chat, msg_id, success_msg("Aktivasi Diperpanjang", f"Aktivasi ID {aid} telah diperpanjang."), activation_actions(aid))
+        _edit(chat, msg_id, success_msg("Aktivasi Diperpanjang", f"Aktivasi ID {aid} telah diperpanjang."), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, "Diperpanjang")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Perpanjang", str(exc)), activation_actions(aid))
+        _edit(chat, msg_id, error_msg("Gagal Perpanjang", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, str(exc), alert=True)
 
 
@@ -728,7 +754,7 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
             _edit(chat, msg_id, error_msg("Tidak Ditemukan", f"Aktivasi ID {aid} tidak ditemukan."), back_menu())
             _answer(call, "Tidak ditemukan", alert=True)
             return
-        _edit(chat, msg_id, activation_detail(act), activation_actions(aid))
+        _edit(chat, msg_id, activation_detail(act), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, "Detail aktivasi")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())
@@ -738,10 +764,10 @@ def _show_activation_detail(chat: int, msg_id: int, aid: str, call: CallbackQuer
 def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
     try:
         data = api.otp_last(aid)
-        _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid))
+        _edit(chat, msg_id, otp_msg(aid, data), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, "OTP dimuat")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Ambil OTP", str(exc)), activation_actions(aid))
+        _edit(chat, msg_id, error_msg("Gagal Ambil OTP", str(exc)), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
         _answer(call, str(exc), alert=True)
 
 
@@ -754,7 +780,7 @@ def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery, page: 
         total = _total_pages_from(data, page, size)
         _set_page(uid, "otp", page, aid=aid)
         txt = otp_msg(aid, data)
-        kb = activation_actions(aid)
+        kb = activation_actions(aid, watching=_is_watching(uid, aid))
         # Sisipkan tombol pagination sebelum tombol kembali
         nav = pagination_keys(page, total, f"otp:{aid}")
         if nav:
@@ -764,12 +790,53 @@ def _show_otp_list(chat: int, msg_id: int, aid: str, call: CallbackQuery, page: 
         _edit(chat, msg_id, txt, kb)
         _answer(call, f"Halaman {page}/{total}")
     except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Ambil Daftar OTP", str(exc)), activation_actions(aid))
+        _edit(chat, msg_id, error_msg("Gagal Ambil Daftar OTP", str(exc)), activation_actions(aid, watching=_is_watching(uid, aid)))
         _answer(call, str(exc), alert=True)
 
 
 # ── Run ─────────────────────────────────────────────────────────
 
+def _start_otp_poller(bot, interval: int = 30):
+    """Background thread: cek aktivasi yang di-watch, kirim pesan saat OTP baru."""
+    import threading
+    import time
+
+    def loop():
+        while True:
+            try:
+                # Ambil semua user yang punya otp_watch
+                for uid in list(user_state.keys()):
+                    watch = _get_watch(uid)
+                    for aid in list(watch.keys()):
+                        try:
+                            data = api.otp_list(aid, page=1, size=5)
+                            items = data.get("data", []) if isinstance(data, dict) else []
+                            if not items:
+                                continue
+                            latest = items[0]
+                            latest_text = str(latest.get("code", latest.get("text", "")))
+                            last_seen = watch.get(aid)
+                            if latest_text and latest_text != last_seen:
+                                watch[aid] = latest_text
+                                set_state(uid, "otp_watch", watch)
+                                bot.send_message(
+                                    uid,
+                                    f"🔔 *OTP Baru untuk Aktivasi {aid}*\n\nKode: *{latest_text}*",
+                                    parse_mode="MarkdownV2",
+                                )
+                        except HeroSMSError:
+                            continue
+                        except Exception:  # noqa: BLE001
+                            continue
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(interval)
+
+    t = threading.Thread(target=loop, daemon=True)
+    t.start()
+
+
 if __name__ == "__main__":
+    _start_otp_poller(bot)
     log.info("Bot HeroSMS dimulai…")
     bot.infinity_polling(skip_pending=True)
