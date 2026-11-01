@@ -316,6 +316,14 @@ def on_callback(call: CallbackQuery) -> None:
             _show_settings(chat, msg_id, uid, call)
             _answer(call, "Mata uang disimpan")
 
+        elif data == "settings:autocancel":
+            cur = str(get_state(uid, "settings_autocancel") or "off")
+            order = ["off", "5", "10", "15"]
+            nxt = order[(order.index(cur) + 1) % len(order)] if cur in order else "5"
+            set_state(uid, "settings_autocancel", nxt)
+            _show_settings(chat, msg_id, uid, call)
+            _answer(call, "Nonaktif" if nxt == "off" else f"Auto-batal: {nxt} menit")
+
         elif data.startswith("buy:country:"):
             parts = data.split(":", 3)
             country = parts[2]
@@ -469,14 +477,17 @@ def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
 def _show_settings(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
     lang = get_state(uid, "settings_lang") or "id"
     cur = get_state(uid, "settings_currency") or "usd"
+    ac = str(get_state(uid, "settings_autocancel") or "off")
     lang_name = "Indonesia" if lang == "id" else "English"
+    ac_name = "Nonaktif" if ac == "off" else f"{ac} menit"
     text = (
         "🔹 *Pengaturan*\n\n"
         f"Bahasa: {esc(lang_name)}\n"
         f"Mata uang tampilan: {code(cur.upper())}\n"
+        f"Auto\\-batal tanpa OTP: {esc(ac_name)}\n"
         "Harga HeroSMS selalu USD, mode IDR menampilkan konversi kurs"
     )
-    _edit(chat, msg_id, text, settings_menu(lang, cur))
+    _edit(chat, msg_id, text, settings_menu(lang, cur, ac))
     _answer(call, "Pengaturan")
 
 
@@ -628,6 +639,7 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
             "currency": currency,
             "activation_id": str(act.get("id", "")),
             "time": time.strftime("%Y-%m-%d %H:%M"),
+            "ts": time.time(),
         }
         pops = get_state(uid, "purchases", []) or []
         pops.append(pur)
@@ -1051,6 +1063,36 @@ def _start_otp_poller(bot, interval: int = 30):
 
                     if changed:
                         set_state(uid, "otp_watch", watch)
+
+                    # Auto-batal: tanpa OTP melebihi ambang -> cancel otomatis (refund)
+                    ac = str(get_state(uid, "settings_autocancel", "off") or "off")
+                    if ac.isdigit():
+                        limit_min = int(ac)
+                        now_t = time.time()
+                        ac_changed = False
+                        for p in purchases:
+                            pid = p.get("activation_id")
+                            pts = p.get("ts")
+                            if not pid or not pts or p.get("autocancel_done"):
+                                continue
+                            if watch.get(pid):  # OTP sudah pernah masuk (kode tersimpan) — jangan batal
+                                continue
+                            if now_t - float(pts) >= limit_min * 60:
+                                p["autocancel_done"] = True
+                                ac_changed = True
+                                try:
+                                    api.cancel_activation(pid)
+                                    watch[pid] = "off"
+                                    bot.send_message(
+                                        uid,
+                                        f"⏹ Aktivasi {pid} dibatalkan otomatis \\({limit_min} menit tanpa OTP\\)\\. Saldo dikembalikan\\.",
+                                        parse_mode="MarkdownV2",
+                                    )
+                                except HeroSMSError:
+                                    pass  # gagal (mis. habis/2 menit pertama) — provider refund otomatis saat kedaluwarsa
+                        if ac_changed:
+                            set_state(uid, "purchases", purchases)
+                            set_state(uid, "otp_watch", watch)
 
                     for aid in list(watch.keys()):
                         if watch.get(aid) == "off":

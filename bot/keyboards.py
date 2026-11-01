@@ -22,14 +22,16 @@ def main_menu() -> InlineKeyboardMarkup:
     return kb
 
 
-def settings_menu(lang: str = "id", currency: str = "usd") -> InlineKeyboardMarkup:
+def settings_menu(lang: str = "id", currency: str = "usd", autocancel: str = "off") -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     lang_name = "Indonesia" if lang == "id" else "English"
+    ac_label = "NONAKTIF" if autocancel in ("off", "", None) else f"{autocancel} MENIT"
     kb.add(InlineKeyboardButton(f"🌐 Bahasa: {lang_name}", callback_data="settings:lang"))
     kb.add(
         InlineKeyboardButton("💵 USD" + (" ✅" if currency == "usd" else ""), callback_data="settings:cur:usd"),
         InlineKeyboardButton("🇮🇩 IDR" + (" ✅" if currency == "idr" else ""), callback_data="settings:cur:idr"),
     )
+    kb.add(InlineKeyboardButton(f"⏱ Auto-Batal OTP: {ac_label}", callback_data="settings:autocancel"))
     kb.add(InlineKeyboardButton("⬅️ Kembali ke Menu", callback_data="menu:main"))
     return kb
 
