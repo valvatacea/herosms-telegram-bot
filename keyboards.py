@@ -40,3 +40,14 @@ def activation_actions(activation_id: str) -> InlineKeyboardMarkup:
     kb.add(InlineKeyboardButton("⬅️ Daftar Aktif", callback_data="menu:active"))
     kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
     return kb
+
+
+def email_menu() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        InlineKeyboardButton("📧 Domain", callback_data="email:domains"),
+        InlineKeyboardButton("💵 Offers", callback_data="email:offers"),
+        InlineKeyboardButton("📬 Daftar Email", callback_data="email:list"),
+    )
+    kb.add(InlineKeyboardButton("🏠 Menu Utama", callback_data="menu:main"))
+    return kb

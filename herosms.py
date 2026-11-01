@@ -14,6 +14,7 @@ class HeroSMS:
     def __init__(self, api_key: str, base_url: str):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
+        self.legacy_base = self.base_url.replace("/api/v1", "")
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {api_key}"})
 
@@ -207,5 +208,5 @@ class HeroSMS:
         p["action"] = action
         # legacy endpoint uses api_key as query param
         p["api_key"] = self.api_key
-        r = self.session.get(f"{self.base_url.replace('/api/v1','')}/stubs/handler_api.php", params=p, timeout=30)
+        r = self.session.get(f"{self.legacy_base}/stubs/handler_api.php", params=p, timeout=30)
         return self._handle(r)
