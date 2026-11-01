@@ -35,6 +35,7 @@ herosms-telegram-bot/
 ├── docs/              # Dokumentasi
 │   ├── API.md         # Referensi semua endpoint API
 │   ├── DEPLOY.md      # Panduan deployment
+│   ├── EVALUASI.md    # Evaluasi & keterbatasan bot
 │   ├── MENU.md        # Alur menu dan UX
 │   └── CONTRIBUTING.md # Panduan kontribusi
 ├── .env.example       # Contoh variabel lingkungan
