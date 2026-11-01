@@ -9,7 +9,9 @@ from typing import Any, Dict
 
 log = logging.getLogger("herosms-bot")
 
-STATE_FILE = os.path.join(os.path.dirname(__file__), "user_state.json")
+STATE_FILE = os.environ.get(
+    "HEROSMS_STATE_FILE", os.path.join(os.path.dirname(__file__), "user_state.json")
+)
 
 
 def _load_state() -> Dict[int, Dict]:
