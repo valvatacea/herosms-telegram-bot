@@ -295,14 +295,9 @@ def purchase_success(act: Dict, price_str: str = "") -> str:
         f"{bold('Negara:')} {esc(str(act.get('countryName', act.get('country','-'))))}",
         f"{bold('Biaya:')} {cost_line}",
     ]
-    try:
-        c, e = str(act.get("createdAt", "")), str(act.get("expiredAt", ""))
-        if c and e:
-            fmt = lambda s: datetime.fromisoformat(s.replace("Z", "+00:00"))
-            mins = int((fmt(e) - fmt(c)).total_seconds() // 60)
-            lines.append(f"{bold('Durasi:')} {code(f'{mins} menit')}")
-    except Exception:
-        pass
+    exp = act.get("expiredAt")
+    if exp and str(exp) not in ("-", ""):
+        lines.append(f"{bold('Kedaluwarsa:')} {code(_fmt_dt(exp))}")
     lines.append(f"\n👉 Klik tombol di bawah untuk ambil OTP atau selesaikan aktivasi\\.")
     return "\n".join(lines) + "\n"
 
