@@ -1,7 +1,7 @@
 # Evaluasi HeroSMS Telegram Bot
 
 Tanggal evaluasi: 2026-11-01 (UTC)
-Versi: commit `5ac4436`
+Versi: commit `f993eb9`
 
 ## 1. Rekapitulasi semua fitur yang sudah selesai
 
@@ -19,26 +19,25 @@ Versi: commit `5ac4436`
 | 🔄 Reaktivasi | Reaktivasi aktivasi yang selesai | ✅ Selesai |
 | ⏳ Perpanjang | Perpanjang masa aktif aktivasi | ✅ Selesai |
 | 📬 Email | Domain, offers, beli, detail, batal, pesan ulang | ✅ Selesai |
+| 📄 Pagination | Daftar aktivasi/riwayat/email/OTP dibagi halaman | ✅ Selesai |
+| 🔔 Notif OTP | Background poler, tombol Pantau/Berhenti Pantau | ✅ Selesai |
+| 💰 Riwayat Transaksi | Daftar pembelian + total pengeluaran | ✅ Selesai |
+| 🔁 Retry API | Exponential backoff pada 429/5xx | ✅ Selesai |
+| 🔁 Multi-instance | `HEROSMS_STATE_FILE` untuk state file terpisah | ✅ Selesai |
 | 🧪 Tes | 7 tes assert-based, tanpa API nyata | ✅ Semua lolos |
 | 📦 Struktur | Paket `bot/`, tes di `tests/`, docs di `docs/` | ✅ Selesai |
-| 📄 Dokumentasi | README, API.md, DEPLOY.md, MENU.md, CONTRIBUTING.md | ✅ Selesai |
+| 📄 Dokumentasi | README, API.md, DEPLOY.md, MENU.md, EVALUASI.md, CONTRIBUTING.md | ✅ Selesai |
 
-## 2. Perbaikan utama dari evaluasi sebelumnya (tiada evaluasi terbaru)
+## 2. Perbaikan dari evaluasi saat ini (6 gap ditutup)
 
-Dari evaluasi terakhir sebelum fitur beli ditambahkan, semua 7 masalah sudah diperbaiki:
-
-1. **`answer_callback_query` semua tombol** — tidak ada lagi loading selamanya.
-2. **Handler `act:view:`** — detail aktivasi dari daftar aktif/riwayat sudah berfungsi.
-3. **Menu email** — sudah ada di main menu (Domain, Offers, Daftar Email).
-4. **State persisten** — `user_state.json` tersimpan di disk, tahan restart.
-5. **Hapus `call_if_available()`** — kode lebih bersih, tidak ada hack.
-6. **`legacy()` pakai `self.legacy_base`** — tidak lagi string-replace rapuh.
-7. **Tes assert-based** — 7 tes ditambahkan, semua lolos.
-
-Fitur baru dari evaluasi ini:
-- **Pilih negara & layanan** dengan urutan populer dulu (Indonesia paling atas).
-- **Tampilkan harga** sebelum transaksi konfirmasi.
-- **Konfirmasi sebelum beli** (tombol Ya/Batal) mencegah transaksi tidak sengaja.
+| No | Gap | Prioritas | Tindakan | Commit |
+|----|-----|-----------|----------|--------|
+| 1 | Tidak ada pagination (daftar terbatas 15-40 item) | Tinggi | Tambah `pagination_keys()`, halaman per user di state, tombol Sebelumnya/Selanjutnya | `af08fd4` |
+| 2 | Lookup harga tampil `-` jika format API tidak cocok | Tinggi | Perluas `_lookup_price()` coba 3+ format respons `getPrices` | `4eb5fb6` |
+| 3 | Tidak ada notifikasi OTP otomatis | Sedang | Background poler tiap 30s, tombol Pantau/Berhenti Pantau, notifikasi OTP baru | `ec368cf` |
+| 4 | Tidak ada rate limiting / retry | Sedang | Retry exponential backoff (max 3x) pada 429/5xx di klien API | `d3f14ee` |
+| 5 | Tidak ada riwayat transaksi detail | Sedang | Rekam pembelian di state, menu Riwayat Transaksi + total | `72d6503` |
+| 6 | Tidak ada multi-bot / multi-account | Rendah | `HEROSMS_STATE_FILE` untuk state file terpisah per instance | `f993eb9` |
 
 ## 3. Kekuatan bot saat ini
 
@@ -50,23 +49,20 @@ Fitur baru dari evaluasi ini:
 - **Tes otomatis** — 7 tes assert-based menggunakan `unittest.mock`, tidak perlu API key nyata untuk menjalankan tes.
 - **Dokumentasi lengkap** — instalasi, deployment (systemd/Docker), referensi API, alur menu, kontribusi.
 
-## 4. Keterbatasan yang masih ada (gap)
+## 4. Keterbatasan yang masih ada (gap tersisa)
 
 | No | Keterbatasan | Dampak | Prioritas |
 |----|--------------|--------|-----------|
-| 1 | **Tidak ada pagination** — daftar negara/layanan/aktivasi terbatas 15-40 item first-batch. | User dengan banyak aktivasi/negara tidak bisa melihat semua. | Tinggi |
-| 2 | **Harga lookup sederhana** — `_lookup_price` mencoba parse `getPrices` dengan asumsi struktur; jika format berbeda dari yang diharapkan, tampilkan `-`. | User tidak selalu melihat harga pasti sebelum konfirmasi. | Tinggi |
-| 3 | **Tidak ada riwayat transaksi detail** — hanya daftar aktivasi, tidak ada ringkasan bulan ini/total pengeluaran. | User tidak bisa melacak pengeluaran overtime. | Sedang |
-| 4 | **Tidak ada notifikasi OTP otomatis** — user harus klik tombol OTP untuk cek kode baru. | OTP terlewat jika user tidak memantau. | Sedang |
-| 5 | **Tidak ada multi-bot / multi-account** — satu BOT_TOKEN satu instance. | Tidak bisa menjalankan banyak bot dari satu kode. | Rendah |
-| 6 | **Tidak ada rate limiting / retry** — jika API HeroSMS rate-limit, bot akan error. | Gangguan saat trafik tinggi. | Sedang |
+| 1 | **Notifikasi OTP hanya untuk activation yang dipantau** — user harus klik "Pantau OTP" dulu. | OTP tidak diforward otomatis untuk semua aktivasi. | Sedang |
+| 2 | **Harga belum tersimpan pada saat transaction dilihat kembali** — riwayat tampil harga saat pembelian, tidak harga saat ini. | Harga di riwayat adalah harga historis. | Rendah |
 
 ## 5. Risiko & catatan teknis
 
 - **`.env` tidak di-commit** — sudah di `.gitignore`. Pastikan `user_state.json` juga tidak di-commit (sudah di `.gitignore`).
 - **`HEROSMS_API_KEY` dikirim via header `Authorization: Bearer`** untuk REST, dan sebagai query param `api_key` untuk legacy.
 - **`parse_mode="MarkdownV2"`** — semua pesan harus di-escape properly; `esc()` di `bot/messages.py` menangani ini.
-- **State file JSON** — tidak ada locking; jika dua instance bot berjalan bersamaan dengan state file yang sama, bisa terjadi race condition (kemungkinan kecil untuk single instance).
+- **State file JSON** — tidak ada locking; jika dua instance bot berjalan bersamaan dengan state file yang sama, bisa terjadi race condition. Gunakan `HEROSMS_STATE_FILE` berbeda untuk setiap instance.
+- **Background poler OTP** — berjalan sebagai daemon thread; berhenti saat proses bot dihentikan.
 
 ## 6. Rekomendasi untuk versi berikutnya (urutan prioritas)
 
@@ -94,8 +90,8 @@ python3 -m tests.test_herosms
 
 - GitHub: https://github.com/valvatacea/herosms-telegram-bot
 - Branch: `master`
-- Commit terbaru: `5ac4436`
+- Commit terbaru: `f993eb9`
 
 ## 9. Kesimpulan
 
-Bot sudah mencakup seluruh API HeroSMS dengan UX yang ramah pengguna, konfirmasi untuk aksi destructive dan pembelian, state persisten, dan dokumentasi lengkap. Semua kode kompilasi bersih dan semua tes lolos. Keterbatasan terbesar saat ini adalah kurangnya pagination dan harga lookup yang kurang akurat, keduanya bisa ditambahkan di versi berikutnya tanpa merusak struktur yang ada.
+Semua 6 gap dari evaluasi sebelumnya telah ditutup. Bot sekarang memiliki pagination, notifikasi OTP otomatis, riwayat transaksi, retry API, dan dukungan multi-instance. Semua kode kompilasi bersih dan semua 7 tes lolos. Bot siap untuk production dengan `.env` yang diisi.
