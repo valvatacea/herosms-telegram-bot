@@ -1005,6 +1005,9 @@ def _show_active(chat: int, msg_id: int, call: CallbackQuery, page: int = 1) -> 
     try:
         data = api.active_activations(page=page, size=size)
         items = data.get("data", []) if isinstance(data, dict) else []
+        for it in items:
+            if isinstance(it, dict):
+                it["costDisp"] = _price_disp(it.get("price", it.get("cost", "-")), uid)
         total = _total_pages_from(data, page, size)
         _set_page(uid, "active", page)
         kb = telebot.types.InlineKeyboardMarkup(row_width=1)

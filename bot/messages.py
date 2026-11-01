@@ -253,9 +253,9 @@ def active_list_msg(data: Dict) -> str:
             aid = item.get("id", "-")
             phone = item.get("phone", "-")
             status = status_name(item.get("status", "-"))
-            cost = item.get("cost", item.get("price", "-"))
+            disp = item.get("costDisp") or esc(str(item.get("cost", item.get("price", "-"))))
             lines.append(
-                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {esc(str(cost))}"
+                f"• {code(str(aid))} \\| {code(str(phone))} \\| {esc(str(status))} \\| {disp}"
             )
         else:
             lines.append(f"• {esc(str(item))}")
