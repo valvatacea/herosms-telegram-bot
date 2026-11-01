@@ -99,16 +99,24 @@ def _get_watch(uid: int) -> dict:
 
 
 def _is_watching(uid: int, aid: str) -> bool:
-    return aid in (_get_watch(uid) or {})
+    return (_get_watch(uid) or {}).get(aid) not in (None, "off")
 
 
 def _watch_toggle(uid: int, aid: str) -> bool:
     """Toggle watch. Return True jika sekarang sedang di-watch."""
     watch = _get_watch(uid)
-    if aid in watch:
+    val = watch.get(aid)
+    if val == "off":
+        # Sedang mati, nyalakan kembali
         del watch[aid]
         set_state(uid, "otp_watch", watch)
+        return True
+    if aid in watch:
+        # Sedang nyala (None atau kode OTP), matikan
+        watch[aid] = "off"
+        set_state(uid, "otp_watch", watch)
         return False
+    # Belum ada, nyalakan default
     watch[aid] = None
     set_state(uid, "otp_watch", watch)
     return True
@@ -507,8 +515,11 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         }
         pops = get_state(uid, "purchases", []) or []
         pops.append(pur)
+        watch = _get_watch(uid) or {}
         set_state(uid, "purchases", pops)
         clear_state(uid)
+        set_state(uid, "purchases", pops)
+        set_state(uid, "otp_watch", watch)
         if call:
             _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", "")), watching=False))
             _answer(call, "Nomor dibeli")
@@ -834,26 +845,6 @@ def _show_transactions(chat: int, msg_id: int, call: CallbackQuery) -> None:
     kb.add(InlineKeyboardButton("⬅️ Kembali", callback_data="menu:main"))
     _edit(chat, msg_id, "\n".join(lines), kb)
     _answer(call, "Riwayat transaksi")
-    try:
-        # coba ambil dari daftar aktif dulu
-        data = api.active_activations()
-        items = data.get("data", []) if isinstance(data, dict) else []
-        act = next((x for x in items if isinstance(x, dict) and str(x.get("id")) == aid), None)
-        if act is None:
-            hist = api.activation_history()
-            hitems = hist.get("data", []) if isinstance(hist, dict) else []
-            act = next((x for x in hitems if isinstance(x, dict) and str(x.get("id")) == aid), None)
-        if act is None:
-            _edit(chat, msg_id, error_msg("Tidak Ditemukan", f"Aktivasi ID {aid} tidak ditemukan."), back_menu())
-            _answer(call, "Tidak ditemukan", alert=True)
-            return
-        _edit(chat, msg_id, activation_detail(act), activation_actions(aid, watching=_is_watching(call.from_user.id, aid)))
-        _answer(call, "Detail aktivasi")
-    except HeroSMSError as exc:
-        _edit(chat, msg_id, error_msg("Gagal Muat Detail", str(exc)), back_menu())
-        _answer(call, str(exc), alert=True)
-
-
 def _show_otp_last(chat: int, msg_id: int, aid: str, call: CallbackQuery) -> None:
     try:
         data = api.otp_last(aid)
@@ -904,9 +895,10 @@ def _start_otp_poller(bot, interval: int = 30):
                     changed = False
 
                     # Daftarkan setiap purchase activation ke watch (default ON / opt-out)
+                    # Skip yang secara eksplisit dimatikan pemain ("off")
                     for p in purchases:
                         aid = p.get("activation_id")
-                        if aid and aid not in watch:
+                        if aid and aid not in watch and watch.get(aid) != "off":
                             watch[aid] = None
                             changed = True
 
@@ -914,6 +906,8 @@ def _start_otp_poller(bot, interval: int = 30):
                         set_state(uid, "otp_watch", watch)
 
                     for aid in list(watch.keys()):
+                        if watch.get(aid) == "off":
+                            continue  # pemain telah mematikan notifikasi untuk activation ini
                         try:
                             data = api.otp_list(aid, page=1, size=5)
                             items = data.get("data", []) if isinstance(data, dict) else []
