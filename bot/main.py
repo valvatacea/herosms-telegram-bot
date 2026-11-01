@@ -472,7 +472,7 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
             _answer(call, "Stok kosong", alert=True)
             return
         lines = [f"🔹 *Pilih Harga OTP*", ""]
-        lines.append(f"Layanan: {code(service)} | Negara: {code(country)}")
+        lines.append(f"Layanan: {code(service)} \\| Negara: {code(country)}")
         lines.append("")
         for price, count in entries:
             lines.append(f"• {code(price)} — stok {code(count)}")
