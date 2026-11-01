@@ -16,7 +16,28 @@ def main_menu() -> InlineKeyboardMarkup:
         InlineKeyboardButton("📜 Riwayat", callback_data="menu:history"),
         InlineKeyboardButton("💰 Riwayat Transaksi", callback_data="menu:transactions"),
     )
+    kb.add(InlineKeyboardButton("⚙️ Pengaturan", callback_data="settings:main"))
     kb.add(InlineKeyboardButton("❌ Tutup", callback_data="menu:close"))
+    return kb
+
+
+def settings_menu(lang: str = "id", currency: str = "usd") -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    lang_name = "Indonesia" if lang == "id" else "English"
+    kb.add(InlineKeyboardButton(f"🌐 Bahasa: {lang_name}", callback_data="settings:lang"))
+    kb.add(
+        InlineKeyboardButton("💵 USD" + (" ✅" if currency == "usd" else ""), callback_data="settings:cur:usd"),
+        InlineKeyboardButton("🇮🇩 IDR" + (" ✅" if currency == "idr" else ""), callback_data="settings:cur:idr"),
+    )
+    kb.add(InlineKeyboardButton("⬅️ Kembali ke Menu", callback_data="menu:main"))
+    return kb
+
+
+def settings_lang_menu(current: str = "id") -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=1)
+    kb.add(InlineKeyboardButton("🇮🇩 Indonesia" + (" ✅" if current == "id" else ""), callback_data="settings:lang:id"))
+    kb.add(InlineKeyboardButton("🇬🇧 English (segera)", callback_data="settings:lang:soon"))
+    kb.add(InlineKeyboardButton("⬅️ Pengaturan", callback_data="settings:main"))
     return kb
 
 

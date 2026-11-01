@@ -25,6 +25,8 @@ from bot.keyboards import (
     buy_confirm_keyboard,
     pagination_keys,
     list_with_pagination,
+    settings_menu,
+    settings_lang_menu,
 )
 from bot.messages import (
     esc,
@@ -163,6 +165,40 @@ def _legacy_items(data):
     return data if isinstance(data, list) else []
 
 
+# ── Kurs USD→IDR (cache 24 jam) & format harga ─────────────────────
+
+_FX = {"rate": None, "ts": 0.0}
+
+
+def _idr_rate() -> float | None:
+    if _FX["rate"] is None or time.time() - _FX["ts"] > 86400:
+        try:
+            r = api.session.get("https://open.er-api.com/v6/latest/USD", timeout=10)
+            _FX["rate"] = float(r.json()["rates"]["IDR"])
+            _FX["ts"] = time.time()
+        except Exception:
+            return _FX["rate"]
+    return _FX["rate"]
+
+
+def _fmt_price(usd, uid) -> str:
+    """Harga sesuai setting mata uang: USD polos, atau USD ≈ Rp (kurs)."""
+    usd = str(usd)
+    if usd in ("-", ""):
+        return code(usd)
+    if (get_state(uid, "settings_currency") or "usd") != "idr":
+        return code(usd)
+    rate = _idr_rate()
+    if not rate:
+        return code(usd)
+    try:
+        idr = float(usd) * rate
+    except ValueError:
+        return code(usd)
+    rp = "Rp" + f"{int(idr):,}".replace(",", ".")
+    return f"{code(usd)} ≈ {esc(rp)}"
+
+
 # ── Command ─────────────────────────────────────────────────────
 
 @bot.message_handler(commands=["start"])
@@ -246,6 +282,27 @@ def on_callback(call: CallbackQuery) -> None:
 
         elif data == "menu:transactions":
             _show_transactions(chat, msg_id, call)
+
+        elif data == "settings:main":
+            _show_settings(chat, msg_id, uid, call)
+
+        elif data == "settings:lang":
+            lang = get_state(uid, "settings_lang") or "id"
+            _edit(chat, msg_id, "🔹 *Pilih Bahasa*", settings_lang_menu(lang))
+            _answer(call, "Pilih bahasa")
+
+        elif data == "settings:lang:id":
+            set_state(uid, "settings_lang", "id")
+            _show_settings(chat, msg_id, uid, call)
+            _answer(call, "Bahasa: Indonesia")
+
+        elif data == "settings:lang:soon":
+            _answer(call, "English segera tersedia", alert=True)
+
+        elif data.startswith("settings:cur:"):
+            set_state(uid, "settings_currency", data.split(":")[2])
+            _show_settings(chat, msg_id, uid, call)
+            _answer(call, "Mata uang disimpan")
 
         elif data.startswith("buy:country:"):
             parts = data.split(":", 3)
@@ -383,12 +440,27 @@ def on_callback(call: CallbackQuery) -> None:
 
 def _show_balance(chat: int, msg_id: int, call: CallbackQuery) -> None:
     try:
+        uid = call.from_user.id
         data = api.get_balance()
-        _edit(chat, msg_id, balance_msg(data), back_menu())
+        _edit(chat, msg_id, balance_msg(data, _fmt_price(data.get("balance", "-"), uid)), back_menu())
         _answer(call, "Saldo dimuat")
     except HeroSMSError as exc:
         _edit(chat, msg_id, error_msg("Gagal Cek Saldo", str(exc)), back_menu())
         _answer(call, _alert("Error", exc), alert=True)
+
+
+def _show_settings(chat: int, msg_id: int, uid: int, call: CallbackQuery) -> None:
+    lang = get_state(uid, "settings_lang") or "id"
+    cur = get_state(uid, "settings_currency") or "usd"
+    lang_name = "Indonesia" if lang == "id" else "English"
+    text = (
+        "🔹 *Pengaturan*\n\n"
+        f"Bahasa: {esc(lang_name)}\n"
+        f"Mata uang tampilan: {code(cur.upper())}\n"
+        "Harga HeroSMS selalu USD, mode IDR menampilkan konversi kurs"
+    )
+    _edit(chat, msg_id, text, settings_menu(lang, cur))
+    _answer(call, "Pengaturan")
 
 
 def _show_stats(chat: int, msg_id: int, call: CallbackQuery) -> None:
@@ -477,7 +549,7 @@ def _show_buy_prices(chat: int, msg_id: int, uid: int, service: str, call: Callb
         lines.append(f"Layanan: {code(service)} \\| Negara: {code(country)}")
         lines.append("")
         for price, count in entries:
-            lines.append(f"• {code(price)} — stok {code(count)}")
+            lines.append(f"• {_fmt_price(price, uid)} — stok {code(count)}")
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
         kb.add(*[telebot.types.InlineKeyboardButton(f"💵 {price}", callback_data=f"buy:price:{price}") for price, _ in entries])
         kb.add(telebot.types.InlineKeyboardButton("⬅️ Batal", callback_data="menu:buy_activation"))
@@ -500,7 +572,7 @@ def _show_buy_confirm(chat: int, msg_id: int, uid: int, price: str, call: Callba
     _edit(
         chat,
         msg_id,
-        buy_confirm_msg(cname, sname, price, "", country, service, duration),
+        buy_confirm_msg(cname, sname, price, "", country, service, duration, _fmt_price(price, uid)),
         buy_confirm_keyboard(country, service),
     )
     _answer(call, "Konfirmasi pembelian")
@@ -538,10 +610,10 @@ def _do_purchase(chat: int, msg_id: int, uid: int, service: str, country: str | 
         set_state(uid, "purchases", pops)
         set_state(uid, "otp_watch", watch)
         if call:
-            _edit(chat, msg_id, purchase_success(act), activation_actions(str(act.get("id", "")), watching=False))
+            _edit(chat, msg_id, purchase_success(act, _fmt_price(act.get("price", get_state(uid, "buy_price", "-")), uid)), activation_actions(str(act.get("id", "")), watching=False))
             _answer(call, "Nomor dibeli")
         else:
-            bot.send_message(chat, purchase_success(act), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
+            bot.send_message(chat, purchase_success(act, _fmt_price(act.get("price", get_state(uid, "buy_price", "-")), uid)), reply_markup=activation_actions(str(act.get("id", "")), watching=False))
     except HeroSMSError as exc:
         if call:
             _edit(chat, msg_id, error_msg("Gagal Beli Nomor", str(exc)), back_menu())

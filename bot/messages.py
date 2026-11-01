@@ -29,12 +29,13 @@ def header(title: str, subtitle: str = "") -> str:
     return "\n".join(lines) + "\n"
 
 
-def balance_msg(data: Dict) -> str:
+def balance_msg(data: Dict, price_str: str = "") -> str:
     bal = data.get("balance", data.get("available", "—"))
     currency = data.get("currency", "")
+    bal_disp = price_str or f"{code(str(bal))} {code(str(currency))}"
     return (
         f"{header('💰 Saldo Akun', 'HeroSMS')}\n"
-        f"{bold('Tersedia:')} {code(bal)} {code(currency)}\n"
+        f"{bold('Tersedia:')} {bal_disp}\n"
     )
 
 
@@ -188,7 +189,8 @@ def otp_msg(activation_id: str, data: Any) -> str:
     return "\n".join(lines) + "\n"
 
 
-def purchase_success(act: Dict) -> str:
+def purchase_success(act: Dict, price_str: str = "") -> str:
+    cost_line = price_str or f"{code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}"
     lines = [
         f"{header('✅ Nomor Dibeli', 'Aktivasi OTP SMS berhasil dibuat')}",
         f"{bold('ID:')} {code(str(act.get('id','-')))}",
@@ -196,7 +198,7 @@ def purchase_success(act: Dict) -> str:
         f"{bold('Kode negara:')} {code(str(act.get('phoneCode', act.get('countryPhoneCode','-'))))}",
         f"{bold('Layanan:')} {esc(str(act.get('service','-')))}",
         f"{bold('Negara:')} {esc(str(act.get('country','-')))}",
-        f"{bold('Biaya:')} {code(str(act.get('cost', act.get('price','-'))))} {code(str(act.get('currency','')))}",
+        f"{bold('Biaya:')} {cost_line}",
     ]
     try:
         c, e = str(act.get("createdAt", "")), str(act.get("expiredAt", ""))
@@ -268,14 +270,15 @@ def email_detail_msg(data: Dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def buy_confirm_msg(country: str, service: str, price: str, currency: str = "", country_id: str = "", service_id: str = "", duration: str = "-") -> str:
+def buy_confirm_msg(country: str, service: str, price: str, currency: str = "", country_id: str = "", service_id: str = "", duration: str = "-", price_str: str = "") -> str:
     c_line = f"{esc(str(country))} {code(str(country_id))}" if country_id and str(country_id) != str(country) else esc(str(country))
     s_line = f"{esc(str(service))} {code(str(service_id))}" if service_id and str(service_id) != str(service) else esc(str(service))
+    p_line = price_str or f"{code(str(price))} {code(str(currency))}"
     return (
         f"{header('🛒 Konfirmasi Pembelian', 'Review sebelum transaksi')}\n"
         f"{bold('Negara:')} {c_line}\n"
         f"{bold('Layanan:')} {s_line}\n"
-        f"{bold('Harga:')} {code(str(price))} {code(str(currency))}\n"
+        f"{bold('Harga:')} {p_line}\n"
         f"{bold('Durasi:')} {esc(str(duration))}\n"
         f"{bold('Nomor:')} akan ditampilkan setelah pembelian\\.\n\n"
         "Lanjutkan pembelian?"
