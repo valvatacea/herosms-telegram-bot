@@ -22,18 +22,6 @@ Endpoint yang dipakai klien `bot/client.py`. Base URL REST: `https://hero-sms.co
 | GET | `/activations/stats` | `user_stats()` | Statistik per negara/layanan |
 | GET | `/activations/offers/{vt}` | `offers(vt, services, countries)` | Daftar harga + stok (layar harga beli) |
 
-## Emails
-
-| Method | Path | Fungsi klien | Keterangan |
-|--------|------|--------------|------------|
-| GET | `/emails` | `email_list()` | Daftar aktivasi email |
-| POST | `/emails` | `buy_email_activation()` | Beli (domain, service) |
-| GET | `/emails/{id}` | `email_detail()` | Detail |
-| DELETE | `/emails/{id}` | `cancel_email()` | Batal |
-| POST | `/emails/{id}/reorder` | `reorder_email()` | Pesan ulang |
-| GET | `/emails/domains` | `email_domains(site)` | Domain (WAJIB param `site`) |
-| GET | `/emails/offers` | `email_offers(site)` | Offers (WAJIB param `site`) |
-
 ## SMS-Activate Compatible (Legacy)
 
 | Fungsi klien | Keterangan |
